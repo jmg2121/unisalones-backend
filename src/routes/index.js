@@ -9,4 +9,9 @@ router.use('/auth', authRoutes);
 router.use('/spaces', spaceRoutes);
 router.use('/reservations', reservationRoutes);
 
+// 👇 Ruta de health check
+router.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 module.exports = router;
