@@ -8,5 +8,5 @@ describe('Email institucional', () => {
   test('rechaza otro dominio', () => {
     process.env.ALLOWED_EMAIL_DOMAIN = 'unicomfacauca.edu.co';
     expect(emailDomainOk('juan@gmail.com')).toBe(false);
-  });
+  });
 });
