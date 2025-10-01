@@ -55,10 +55,14 @@ describe('Flujo básico', () => {
     expect(resv.body.receipt_code).toBeTruthy();
 
     // Ya no disponible
-    const avail2 = await request(app).get('/api/spaces/available')
-      .set('Authorization', `Bearer ${userToken}`)
-      .query({ date, start: '11:00', end: '12:30', type: 'laboratory' });
-    expect(avail2.body.find(s => s.id === spaceId)).toBeUndefined();
+    
+   const avail2 = await request(app).get('/api/spaces/available')
+  .set('Authorization', `Bearer ${userToken}`)
+  .query({ date, start: '11:00', end: '12:30', type: 'laboratory' });
+
+// En vez de toBeUndefined:
+expect(avail2.body.some(s => s.id === spaceId)).toBe(false);
+
 
     // Cancelar
     const cancel = await request(app).delete(`/api/reservations/${resv.body.id}`).set('Authorization', `Bearer ${userToken}`);
