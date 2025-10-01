@@ -8,7 +8,7 @@ const LOCK_MINUTES = 15;
 
 function emailDomainOk(email) {
   const domain = process.env.ALLOWED_EMAIL_DOMAIN || 'unicomfacauca.edu.co';
-  return email.endsWith('@' + domain);
+  return email.toLowerCase().endsWith('@' + domain.toLowerCase());
 }
 
 async function register({ name, email, password, role }) {
@@ -22,7 +22,7 @@ async function login({ email, password }) {
   const user = await User.findOne({ where: { email } });
   if (!user) throw new Error('Credenciales inválidas');
 
-  // Lockout
+  // Si está bloqueado, no permitir login
   if (user.lock_until && dayjs(user.lock_until).isAfter(dayjs())) {
     throw new Error('Cuenta bloqueada temporalmente. Intente más tarde.');
   }
@@ -38,12 +38,18 @@ async function login({ email, password }) {
     throw new Error('Credenciales inválidas');
   }
 
+  // Login correcto: limpiar contadores
   user.failed_attempts = 0;
   user.lock_until = null;
   await user.save();
 
-  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'dev', { expiresIn: '12h' });
+  const token = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET || 'dev',
+    { expiresIn: process.env.JWT_EXPIRES || '12h' }
+  );
+
   return { token, user };
 }
 
-module.exports = { register, login, emailDomainOk };
+module.exports = { register, login, emailDomainOk };
