@@ -19,4 +19,4 @@ async function loginCtrl(req, res, next) {
   } catch (e) { next(e); }
 }
 
-module.exports = { registerCtrl, loginCtrl };
+module.exports = { registerCtrl, loginCtrl };
