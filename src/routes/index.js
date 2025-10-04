@@ -5,13 +5,14 @@ const reservationRoutes = require('./reservation.routes');
 
 const router = express.Router();
 
-router.use('/auth', authRoutes);
-router.use('/spaces', spaceRoutes);
-router.use('/reservations', reservationRoutes);
+// 📦 Rutas principales del sistema
+router.use('/auth', authRoutes);           // Registro e inicio de sesión
+router.use('/spaces', spaceRoutes);        // Gestión de espacios
+router.use('/reservations', reservationRoutes); // Gestión de reservas
 
-// 👇 Ruta de health check
+// 📌 Health check (verificación del estado del servidor)
 router.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', message: 'Servidor funcionando correctamente 🚀' });
 });
 
 module.exports = router;
