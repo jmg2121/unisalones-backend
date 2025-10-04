@@ -1,3 +1,5 @@
+jest.setTimeout(10000);
+
 const request = require('supertest');
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'testsecret';
