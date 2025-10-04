@@ -50,4 +50,4 @@ async function loginCtrl(req, res, next) {
   }
 }
 
-module.exports = { registerCtrl, loginCtrl };
+module.exports = { registerCtrl, loginCtrl };

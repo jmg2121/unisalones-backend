@@ -24,14 +24,14 @@ async function createReservation({ spaceId, userId, start, end }) {
   }
 
   const receipt = uuidv4();
-  const reservation = await Reservation.create({
-    space_id: spaceId,
-    user_id: userId,
-    start_time: start,
-    end_time: end,
-    status: 'confirmed',
-    receipt_code: receipt
-  });
+ const reservation = await Reservation.create({
+  user_id: userId,
+  space_id: spaceId,   // 👈 aquí sí va space_id (DB)
+  start_time: start,
+  end_time: end,
+  status: 'confirmed',
+  receipt_code: `R-${Date.now()}`
+});
 
   await createAndSend(userId, 'reservation_confirmed', { reservationId: reservation.id, receipt });
   return { reservation };
