@@ -6,13 +6,13 @@ const { User } = require("../models");
 const MAX_ATTEMPTS = 3;
 const LOCK_MINUTES = 15;
 
+// Validación de dominio institucional
 function emailDomainOk(email) {
   const domain = process.env.ALLOWED_EMAIL_DOMAIN || "unicomfacauca.edu.co";
-  return email.endsWith("@" + domain);
-  const domain = process.env.ALLOWED_EMAIL_DOMAIN || 'unicomfacauca.edu.co';
-  return email.toLowerCase().endsWith('@' + domain.toLowerCase());
+  return email.toLowerCase().endsWith("@" + domain.toLowerCase());
 }
 
+// Registro de usuario
 async function register({ name, email, password, role }) {
   if (!emailDomainOk(email)) {
     throw new Error("Email no permitido: debe ser institucional (@unicomfacauca.edu.co)");
@@ -20,8 +20,8 @@ async function register({ name, email, password, role }) {
 
   const hash = await bcrypt.hash(password, 10);
   const user = await User.create({
-    name: name,
-    email: email,
+    name,
+    email,
     password_hash: hash,
     role: role || "student"
   });
@@ -30,12 +30,12 @@ async function register({ name, email, password, role }) {
   return user;
 }
 
+// Inicio de sesión con bloqueo por intentos fallidos
 async function login({ email, password }) {
   const user = await User.findOne({ where: { email } });
   if (!user) throw new Error("Credenciales invalidas");
 
-  // Verificar si la cuenta esta bloqueada temporalmente
-  // Si está bloqueado, no permitir login
+  // Bloqueo temporal si excede los intentos
   if (user.lock_until && dayjs(user.lock_until).isAfter(dayjs())) {
     const remaining = dayjs(user.lock_until).diff(dayjs(), "minute");
     throw new Error("Cuenta bloqueada temporalmente. Intente en " + remaining + " minutos.");
@@ -52,10 +52,9 @@ async function login({ email, password }) {
     }
 
     await user.save();
-    throw new Error("Credenciales invalidas");
+    throw new Error("Credenciales inválidas");
   }
 
-  // Si el login es exitoso, se resetean los bloqueos
   // Login correcto: limpiar contadores
   user.failed_attempts = 0;
   user.lock_until = null;
@@ -64,7 +63,7 @@ async function login({ email, password }) {
   const token = jwt.sign(
     { id: user.id, role: user.role },
     process.env.JWT_SECRET || "dev",
-    { expiresIn: "12h" }
+    { expiresIn: process.env.JWT_EXPIRES || "12h" }
   );
 
   console.log("Login exitoso:", email);
@@ -72,11 +71,3 @@ async function login({ email, password }) {
 }
 
 module.exports = { register, login, emailDomainOk };
-    process.env.JWT_SECRET || 'dev',
-    { expiresIn: process.env.JWT_EXPIRES || '12h' }
-  );
-
-  return { token, user };
-}
-
-module.exports = { register, login, emailDomainOk };

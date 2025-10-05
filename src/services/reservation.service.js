@@ -8,11 +8,15 @@ async function hasOverlap(spaceId, start, end) {
     where: {
       space_id: spaceId,
       status: 'confirmed',
-      [Op.or]: [{ start_time: { [Op.lt]: end }, end_time: { [Op.gt]: start } }]
+      [Op.and]: [
+        { start_time: { [Op.lt]: end } },
+        { end_time: { [Op.gt]: start } }
+      ]
     }
   });
   return reservations.length > 0;
 }
+
 
 async function createReservation({ spaceId, userId, start, end }) {
   const space = await Space.findByPk(spaceId);
