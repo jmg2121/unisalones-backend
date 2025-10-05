@@ -86,7 +86,7 @@ async function deleteSpace(id) {
 // Buscar disponibilidad
 // =======================
 async function searchAvailable({ date, start, end, type }) {
-  if (!date || !start || !end) throw new Error('date, start y end son requeridos');
+  
 
   // Normalizamos siempre como ISO
   const startTime = new Date(`${date}T${start}:00.000Z`);
