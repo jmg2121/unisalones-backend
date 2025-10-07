@@ -5,27 +5,33 @@ const {
   modify,
   cancelCtrl,
   myHistory,
-  joinWaitlistCtrl
+  joinWaitlistCtrl,
+  getAllReservations,
+  getWaitlistCtrl
 } = require('../controllers/reservation.controller');
 
 const router = express.Router();
 
-//  Crear nueva reserva
-// Requiere autenticación
+// 📅 Crear nueva reserva
 router.post('/', authenticate, create);
 
-//  Modificar reserva existente
-// El usuario solo puede modificar sus propias reservas (verificado en el servicio)
+// ✏️ Modificar una reserva existente
 router.patch('/:id', authenticate, modify);
 
-// Cancelar una reserva
-// Solo el usuario dueño o un admin puede cancelarla
+// ❌ Cancelar una reserva
 router.delete('/:id', authenticate, cancelCtrl);
 
-// Consultar historial de reservas del usuario autenticado
+// 📋 Listar reservas del usuario autenticado
 router.get('/me', authenticate, myHistory);
 
-// Unirse a la lista de espera de un espacio ocupado
+// 📋 Listar todas las reservas (GET /api/reservations)
+router.get('/', authenticate, getAllReservations);
+
+// ⏳ Unirse a la lista de espera de un espacio ocupado
 router.post('/waitlist', authenticate, joinWaitlistCtrl);
 
+// 📋 Obtener lista de espera del usuario autenticado
+router.get('/waitlist', authenticate, getWaitlistCtrl);
+
 module.exports = router;
+
