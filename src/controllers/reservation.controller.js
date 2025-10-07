@@ -147,6 +147,21 @@ async function myHistory(req, res, next) {
   }
 }
 
+// ✅ Obtener todas las reservas (usuario autenticado)
+async function getAllReservations(req, res, next) {
+  try {
+    const list = await Reservation.findAll({
+      where: { user_id: req.user.id },
+      order: [['start_time', 'DESC']]
+    });
+    res.json(list);
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development') console.error('Error al obtener reservas:', e);
+    next(e);
+  }
+}
+
+
 // ✅ Unirse a lista de espera
 async function joinWaitlistCtrl(req, res, next) {
   try {
@@ -177,4 +192,25 @@ async function joinWaitlistCtrl(req, res, next) {
   }
 }
 
-module.exports = { create, modify, cancelCtrl, myHistory, joinWaitlistCtrl };
+// ✅ Obtener la lista de espera del usuario autenticado
+async function getWaitlistCtrl(req, res, next) {
+  try {
+    const { WaitlistEntry } = require('../models');
+    const list = await WaitlistEntry.findAll({
+      where: { user_id: req.user.id },
+      order: [['createdAt', 'DESC']]
+    });
+
+    if (!list.length) {
+      return res.status(404).json({ message: 'No hay registros en la lista de espera.' });
+    }
+
+    res.json(list);
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development') console.error('Error al obtener lista de espera:', e);
+    next(e);
+  }
+}
+
+module.exports = { create, modify, cancelCtrl, myHistory, joinWaitlistCtrl, getWaitlistCtrl, getAllReservations };
+
