@@ -1,144 +1,248 @@
-# 🎓 Unisalones – Backend MVC (Express + Sequelize + TDD)
+# 🎓 Unisalones -- Backend MVC (Express + Sequelize + TDD)
 
-Backend funcional para el sistema de **reserva y gestión de espacios académicos** en Unicomfacauca.  
-El proyecto sigue el **patrón MVC**, está desarrollado con **Node.js, Express y Sequelize**,  
-y se diseñó aplicando un enfoque **TDD (Desarrollo Guiado por Pruebas)** con **Jest y Supertest**.
+Backend funcional para el sistema de **reserva y gestión de espacios
+académicos** en Unicomfacauca.\
+El proyecto sigue el **patrón MVC**, está desarrollado con **Node.js,
+Express y Sequelize**,\
+y se diseñó aplicando un enfoque **TDD (Desarrollo Guiado por Pruebas)**
+con **Jest y Supertest**.
 
----
+------------------------------------------------------------------------
 
-##  Descripción del proyecto
+## 🧩 Descripción del proyecto
 
-**Unisalones** permite a los usuarios (administradores y estudiantes) gestionar la reserva de salones, laboratorios y otros espacios institucionales.  
-El sistema garantiza la disponibilidad, evita conflictos de horarios y ofrece funcionalidades para crear, consultar y cancelar reservas.
+**Unisalones** permite a los usuarios (administradores y estudiantes)
+gestionar la reserva de salones, laboratorios y otros espacios
+institucionales.\
+El sistema garantiza la disponibilidad, evita conflictos de horarios y
+ofrece funcionalidades para crear, consultar y cancelar reservas.
 
-**Objetivo:**  
-Implementar un backend escalable y probado que cumpla con los criterios de aceptación definidos en las historias de usuario del *Spring Backlog*.
+**Objetivo:**\
+Implementar un backend escalable, documentado y probado que cumpla con
+los criterios de aceptación definidos en las historias de usuario del
+*Sprint Backlog*.
 
----
+------------------------------------------------------------------------
 
-##  Arquitectura del proyecto
+## 🏗 Arquitectura del proyecto
 
-El proyecto está estructurado bajo el patrón **MVC (Modelo – Vista – Controlador)**:
+El proyecto está estructurado bajo el patrón **MVC (Modelo -- Vista --
+Controlador)**:
 
-```
-src/
- ├── models/          # Definición de entidades Sequelize (User, Space, Reservation, etc.)
- ├── controllers/     # Lógica principal de endpoints
- ├── routes/          # Definición de rutas Express
- ├── services/        # Funciones auxiliares (auth, notificaciones, etc.)
- ├── middlewares/     # Autenticación, validación, roles, etc.
- ├── tests/           # Pruebas unitarias e integración con Jest + Supertest
- └── app.js           # Configuración global del servidor Express
-```
+    src/
+     ├── models/          # Definición de entidades Sequelize (User, Space, Reservation, etc.)
+     ├── controllers/     # Lógica principal de endpoints
+     ├── routes/          # Definición de rutas Express
+     ├── services/        # Funciones auxiliares (auth, notificaciones, etc.)
+     ├── middlewares/     # Autenticación, validación, roles, etc.
+     ├── tests/           # Pruebas unitarias e integración con Jest + Supertest
+     ├── config/          # Configuraciones (DB, Swagger)
+     └── app.js           # Configuración global del servidor Express
 
----
+------------------------------------------------------------------------
 
-##  Instalación y configuración
+## ⚙️ Instalación y configuración
 
 ### 1️⃣ Clonar el repositorio
-```bash
+
+``` bash
 git clone https://github.com/jmg2121/unisalones-backend.git
 cd unisalones-backend
 ```
 
 ### 2️⃣ Instalar dependencias
-```bash
+
+``` bash
 npm install
 ```
 
-### 3️⃣ Configurar variables de entorno  
-Crea un archivo llamado `.env` en la raíz del proyecto con el siguiente contenido (puedes usar `.env.example` como base):
+### 3️⃣ Configurar variables de entorno (.env)
 
-```env
-# Puerto del servidor
+``` env
 PORT=3000
-
-# Base de datos MySQL (modo desarrollo)
 DB_USER=root
 DB_PASS=tu_contraseña
 DB_NAME=unisalones_db
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DIALECT=mysql
-
-# Base de datos para pruebas (SQLite)
 TEST_DB_STORAGE=:memory:
-
-# Clave secreta para JWT
 JWT_SECRET=clave_super_secreta
+NODE_ENV=development
 ```
 
----
+------------------------------------------------------------------------
 
-##  Ejecución del proyecto
+## ▶ Ejecución del proyecto
 
-### ▶ Modo desarrollo
-```bash
+### Modo desarrollo
+
+``` bash
 npm run dev
 ```
-Inicia el servidor Express con **nodemon**, conexión a MySQL y logs activos.
 
----
+### Modo producción
 
-###  Ejecutar pruebas (modo TDD)
-```bash
+``` bash
+npm start
+```
+
+------------------------------------------------------------------------
+
+## 🧪 Ejecución de pruebas (TDD)
+
+``` bash
 npm test
 ```
-Ejecuta todas las pruebas unitarias e integración con Jest.  
-Verifica automáticamente el flujo de:
-- Registro y login de usuarios  
-- Creación y consulta de espacios  
-- Reserva y cancelación de espacios  
 
-Ejemplo de salida:
+Ejecuta todas las pruebas unitarias e integración con Jest.\
+Verifica automáticamente el flujo de autenticación, creación de
+espacios, reservas y notificaciones.
+
+Ejemplo de salida esperada:
+
+    Test Suites: 7 passed, 7 total
+    Tests: 12 passed, 12 total
+
+------------------------------------------------------------------------
+
+## 🧱 Modelos principales
+
+  Entidad             Descripción
+  ------------------- -----------------------------------------
+  **User**            Representa usuarios (admin, estudiante)
+  **Space**           Espacios físicos (salón, laboratorio)
+  **Reservation**     Controla reservas con estado y horario
+  **Notification**    Registra mensajes o correos enviados
+  **WaitlistEntry**   Lista de espera para espacios ocupados
+
+------------------------------------------------------------------------
+
+## 📘 Documentación de la API (Swagger)
+
+### Descripción
+
+La API está documentada con **Swagger UI**, accesible desde cualquier
+navegador.
+
+### Rutas documentadas
+
+-   `/api/spaces`
+-   `/api/reservations`
+
+### Acceso
+
+``` bash
+npm run dev
 ```
-Test Suites: 6 passed, 6 total
-Tests:       11 passed, 11 total
+
+👉 <http://localhost:3000/api-docs>
+
+### Scripts
+
+``` bash
+npm run swagger:gen
+npm run swagger:check
 ```
 
----
+------------------------------------------------------------------------
 
-##  Modelos principales
+## 🧩 Pruebas de Swagger
 
-| Entidad | Descripción | Relaciones |
-|----------|--------------|-------------|
-| **User** | Representa a los usuarios (admin, estudiante) | Tiene muchas reservas |
-| **Space** | Representa los espacios físicos (salón, laboratorio) | Tiene muchas reservas |
-| **Reservation** | Controla las reservas con estado y horario | Pertenece a User y Space |
+Archivo: `tests/integration/api-docs.int.test.js`
 
----
+``` js
+const request = require('supertest');
+const app = require('../../src/app');
 
-##  Pruebas implementadas
+describe('GET /api-docs', () => {
+  it('debe responder 200 y servir la interfaz Swagger UI', async () => {
+    const res = await request(app).get('/api-docs/');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('Swagger UI');
+  });
+});
+```
 
-- **Unitarias:** validan funciones específicas (`authLockout`, `availability`, `space`).
-- **Integración:** prueban el flujo completo de reserva (`app.test.js`).
-- **Evidencias:** todas las pruebas pasan correctamente (`6 suites, 11 tests`).
+Resultado esperado:
 
----
+    PASS tests/integration/api-docs.int.test.js
+    ✓ debe responder 200 y servir la interfaz Swagger UI (50 ms)
 
-##  Equipo de desarrollo
+------------------------------------------------------------------------
 
-| Integrante | Rol | Rama |
-|-------------|-----|------|
-| Gabriel     | Lógica de backend y autenticación | `feature/gabriel` |
-| Camila      | Módulo de reservas (TDD) | `feature/camila` |
-| Isabella    | Modelos y rutas | `feature/isabella` |
-| Johnatan    | Pruebas de integración y corrección final | `feature/johnatan` |
-| Juan José Muñoz Garzón | Coordinación, documentación y soporte técnico | `feature/juan` |
+## ⚠️ Riesgos y Rollback -- Bloque A (Swagger)
 
----
+### Riesgos detectados
 
-##  Tecnologías utilizadas
+  ------------------------------------------------------------------------------
+  Riesgo             Descripción             Impacto          Solución
+  ------------------ ----------------------- ---------------- ------------------
+  Incompatibilidad   Versiones de Swagger    Swagger no       Fijar versiones en
+  de dependencias    distintas a Express 4.x inicia.          package.json
+                     pueden fallar.                           
 
-- **Node.js** – entorno de ejecución  
-- **Express.js** – framework backend  
-- **Sequelize ORM** – conexión con MySQL y SQLite  
-- **Jest + Supertest** – pruebas automáticas (TDD)  
-- **dotenv** – manejo de variables de entorno  
-- **Nodemon** – reinicio automático en desarrollo
+  Errores de         Bloques mal cerrados    `/api-docs`      Validar
+  anotación JSDoc    pueden romper el JSON.  falla.           anotaciones antes
+                                                              de `swagger:gen`
 
----
+  Ruta en conflicto  Otra librería puede     Documentación    Reservar
+  (`/api-docs`)      usar la misma ruta.     inaccesible.     `/api-docs` solo
+                                                              para Swagger
 
-##  Licencia
-Proyecto académico desarrollado para la asignatura **Grupo Ingeniería de Software II**  
-en **Unicomfacauca – 2025**.
+  Documentación      Cambios no reflejados   Swagger muestra  Actualizar junto
+  desactualizada     en las anotaciones.     datos            con controladores
+                                             incorrectos.     
+  ------------------------------------------------------------------------------
+
+### Rollback (reversión)
+
+1.  Desinstalar dependencias:
+
+    ``` bash
+    npm uninstall swagger-ui-express swagger-jsdoc
+    ```
+
+2.  Limpiar el código:
+
+    -   Quitar el bloque Swagger de `src/app.js`
+    -   Borrar los comentarios `@swagger` en las rutas
+
+3.  Restaurar versión estable:
+
+    ``` bash
+    git restore src/app.js package.json
+    ```
+
+4.  Probar funcionamiento normal:
+
+    ``` bash
+    npm run dev
+    ```
+
+------------------------------------------------------------------------
+
+## 👥 Equipo de desarrollo
+
+  Integrante                   Rol
+  ---------------------------- ------------------------------
+  Gabriel                      Backend y autenticación
+  Camila                       Módulo de reservas (TDD)
+  Isabella                     Modelos y rutas
+  Johnatan                     Pruebas de integración
+  **Juan José Muñoz Garzón**   Coordinación y documentación
+
+------------------------------------------------------------------------
+
+## 💻 Tecnologías utilizadas
+
+Node.js, Express.js, Sequelize ORM, Jest + Supertest, Swagger UI +
+JSDoc, dotenv, Nodemon
+
+------------------------------------------------------------------------
+
+## 🏁 Licencia
+
+Proyecto académico desarrollado para la asignatura **Ingeniería de
+Software II**\
+en **Unicomfacauca -- 2025**.

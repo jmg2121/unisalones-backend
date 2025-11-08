@@ -10,7 +10,9 @@
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "migrate": "sequelize db:migrate",
     "seed": "sequelize db:seed:all",
-    "db:reset": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all"
+    "db:reset": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",
+    "swagger:check": "node ./src/config/swagger-build.js --check",
+    "swagger:gen": "node ./src/config/swagger-build.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -26,6 +28,8 @@
     "nodemailer": "^6.9.13",
     "sequelize": "^6.37.3",
     "sqlite3": "^5.1.7",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
@@ -33,6 +37,6 @@
     "jest": "^29.7.0",
     "nodemon": "^3.1.10",
     "sequelize-cli": "^6.6.2",
-    "supertest": "^6.3.4"
+    "supertest": "^7.1.3"
   }
 }
