@@ -1,5 +1,3 @@
-// NUEVO EN SPRINT 2 – BLOQUE A
-// src/config/swagger.js
 const swaggerJSDoc = require('swagger-jsdoc');
 
 const swaggerDefinition = {
@@ -29,7 +27,12 @@ const swaggerDefinition = {
   ],
   components: {
     securitySchemes: {
-      bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Introduce el token con el formato: Bearer <tu_token_JWT>'
+      }
     },
     schemas: {
       // Esquemas base reutilizables
@@ -63,7 +66,13 @@ const swaggerDefinition = {
         }
       }
     }
-  }
+  },
+  // 🔐 NUEVO EN SPRINT 2 – BLOQUE A: seguridad global JWT
+  security: [
+    {
+      bearerAuth: []
+    }
+  ]
 };
 
 // Archivos a escanear para anotaciones @swagger

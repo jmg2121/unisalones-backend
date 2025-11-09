@@ -106,6 +106,84 @@ Ejemplo de salida esperada:
 
 ------------------------------------------------------------------------
 
+---
+
+## ✉️ Bloque B – Sistema de Notificaciones y Correo (Mailtrap)
+
+### Funcionalidad
+El sistema envía correos automáticos al crear o cancelar reservas.  
+Los mensajes se gestionan con **Nodemailer** y se almacenan en la tabla `notifications`.
+
+- **Correo de confirmación:** al crear reserva.  
+- **Correo de cancelación:** al eliminar reserva.  
+- **Pruebas de humo SMTP:** `npm run email:smoke`.
+
+### 🧩 Riesgos y Rollback – Bloque B
+
+#### Riesgos identificados
+
+| Riesgo | Descripción | Mitigación |
+|--------|--------------|------------|
+| SMTP inaccesible | El servicio Mailtrap o las credenciales pueden fallar. | El envío es **asíncrono**, el flujo de reserva no se bloquea. |
+| Plantillas mal formadas | Si el HTML del correo es inválido, algunos clientes no lo renderizan. | Se usan plantillas simples y probadas. |
+| Campos nulos (usuario sin email) | Puede fallar con `No recipients defined`. | Validar `user.email` antes de enviar. |
+| Bloqueo del flujo | Si el envío fuera sincrónico, el usuario esperaría el correo. | Se ejecuta como tarea **asíncrona** no bloqueante. |
+
+---
+
+#### 🔁 Rollback (reversión segura)
+
+1. Quitar llamadas a:
+   ```js
+   sendReservationConfirmation(...)
+   sendReservationCancellation(...)
+   ```
+   dentro de `src/controllers/reservation.controller.js`.
+
+2. Eliminar archivos:
+   - `src/config/email.js`
+   - `src/services/templates/emailTemplates.js`
+
+3. Comentar o borrar del `.env`:
+   ```bash
+   SMTP_HOST=
+   SMTP_PORT=
+   SMTP_USER=
+   SMTP_PASS=
+   SMTP_FROM=
+   ```
+
+4. Borrar pruebas asociadas:
+   ```
+   tests/unit/notifications.service.test.js
+   tests/integration/notifications.int.test.js
+   ```
+
+5. Verificar que reservas sigan funcionando sin correo:
+   ```bash
+   npm test
+   ```
+
+---
+
+#### ▶ Cómo ejecutar todo el Bloque B
+
+1. Completa el `.env` con tus credenciales SMTP.  
+2. Inicia el servidor:
+   ```bash
+   npm run dev
+   ```
+3. Ejecuta pruebas automáticas:
+   ```bash
+   npm test
+   ```
+4. Verifica en Mailtrap:
+   - Crea una reserva → correo de confirmación  
+   - Cancela → correo de cancelación  
+   - Confirma los registros en `notifications`
+
+---
+
 ## 🧱 Modelos principales
 
   Entidad             Descripción

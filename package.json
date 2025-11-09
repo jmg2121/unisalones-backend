@@ -7,12 +7,15 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "test": "cross-env NODE_ENV=test jest --config jest.config.js --runInBand --silent=false",
+    "test:unit": "cross-env NODE_ENV=test jest tests/unit --runInBand --silent",
+    "test:int": "cross-env NODE_ENV=test jest tests/integration --runInBand --silent=false",
     "migrate": "sequelize db:migrate",
     "seed": "sequelize db:seed:all",
     "db:reset": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",
     "swagger:check": "node ./src/config/swagger-build.js --check",
-    "swagger:gen": "node ./src/config/swagger-build.js"
+    "swagger:gen": "node ./src/config/swagger-build.js",
+    "email:smoke": "node src/scripts/email-smoke.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -38,5 +41,11 @@
     "nodemon": "^3.1.10",
     "sequelize-cli": "^6.6.2",
     "supertest": "^7.1.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/tests"],
+    "moduleDirectories": ["node_modules", "src"],
+    "setupFilesAfterEnv": ["<rootDir>/tests/setupTests.js"]
   }
 }

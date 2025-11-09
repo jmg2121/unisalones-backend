@@ -1,3 +1,4 @@
+// Dependencias principales
 const dayjs = require('dayjs');
 const { Reservation } = require('../models');
 const {
@@ -7,45 +8,52 @@ const {
   joinWaitlist
 } = require('../services/reservation.service');
 
-// ✅ Crear reserva
+// Servicios de notificación (correo real con Nodemailer)
+const {
+  sendReservationConfirmation,
+  sendReservationCancellation
+} = require('../services/notificationService');
+
+// Crear reserva
 async function create(req, res, next) {
   try {
-    // Logs de depuración
     console.log('DEBUG create reservation headers:', req.headers);
-    /* eslint-disable */console.log('DEBUG create reservation body:', req.body);
-    /* eslint-disable */console.log('DEBUG create reservation query:', req.query);
-    /* eslint-disable */console.log('DEBUG create reservation params:', req.params);
+    console.log('DEBUG create reservation body:', req.body);
+    console.log('DEBUG create reservation query:', req.query);
+    console.log('DEBUG create reservation params:', req.params);
 
-    // Intentar obtener spaceId de body (camel o snake), query o params
+    // Aceptar start/startTime y end/endTime
+    const { start, end, startTime, endTime } = req.body || {};
+    const startValue = start || startTime;
+    const endValue = end || endTime;
+
     const rawSpaceId =
       (req.body && (req.body.spaceId ?? req.body.space_id)) ??
       (req.query && (req.query.spaceId ?? req.query.space_id)) ??
       (req.params && (req.params.spaceId ?? req.params.space_id));
 
-    const { start, end } = req.body || {};
-
-    // Validaciones básicas
-    if (rawSpaceId === undefined || start === undefined || end === undefined) {
-      return res.status(400).json({ error: 'Faltan campos requeridos: spaceId (body/query/params), start, end' });
+    if (!rawSpaceId || !startValue || !endValue) {
+      return res.status(400).json({
+        error: 'Faltan campos requeridos: spaceId, start o end'
+      });
     }
 
-    // Asegurar que spaceId es número
     const spaceId = Number(rawSpaceId);
     if (Number.isNaN(spaceId) || spaceId <= 0) {
       return res.status(400).json({ error: 'spaceId inválido' });
     }
 
-    // Validar fechas con dayjs
-    const startDate = dayjs(start);
-    const endDate = dayjs(end);
+    const startDate = dayjs(startValue);
+    const endDate = dayjs(endValue);
     if (!startDate.isValid() || !endDate.isValid()) {
-      return res.status(400).json({ error: 'start o end inválidos. Usa un formato ISO o reconocido por dayjs.' });
+      return res.status(400).json({
+        error: 'start o end inválidos. Usa formato ISO reconocido por dayjs.'
+      });
     }
     if (endDate.isSameOrBefore(startDate)) {
       return res.status(400).json({ error: 'end debe ser posterior a start' });
     }
 
-    // Llamar al servicio
     const result = await createReservation({
       spaceId,
       userId: req.user.id,
@@ -53,32 +61,48 @@ async function create(req, res, next) {
       end: endDate.toDate()
     });
 
-    if (!result) {
-      return res.status(500).json({ error: 'No se pudo crear la reserva' });
-    }
+    if (!result) return res.status(500).json({ error: 'No se pudo crear la reserva' });
     if (result.conflict) {
-      // Puedes cambiar a joinWaitlist aquí si quieres comportamiento automático
-      return res.status(409).json({ message: 'El espacio ya está reservado en ese horario' });
-    }
-    if (result.reservation) {
-      return res.status(201).json(result.reservation);
+      return res
+        .status(409)
+        .json({ message: 'El espacio ya está reservado en ese horario' });
     }
 
-    return res.status(500).json({ error: 'Resultado desconocido al intentar crear reserva' });
+    if (result.reservation) {
+      const reservation = result.reservation;
+      res.status(201).json(reservation);
+
+      try {
+        const { User } = require('../models');
+        const user = await User.findByPk(req.user.id);
+
+        if (user && user.email) {
+          console.log(`Enviando correo de confirmación a ${user.email}`);
+          await sendReservationConfirmation(user, reservation);
+        } else {
+          console.warn(`No se encontró correo electrónico válido para el usuario ID ${req.user.id}.`);
+        }
+      } catch (err) {
+        console.error('Error enviando correo de confirmación:', err.message);
+      }
+      return;
+    }
+
+    return res
+      .status(500)
+      .json({ error: 'Resultado desconocido al intentar crear reserva' });
   } catch (e) {
-    if (process.env.NODE_ENV === 'development') console.error('Error en create reservation controller:', e);
+    console.error('Error en create reservation controller:', e);
     next(e);
   }
 }
 
-
-// ✅ Modificar reserva
+// Modificar reserva
 async function modify(req, res, next) {
   try {
     const { start, end } = req.body;
     const reservationId = req.params.id;
 
-    // 🔍 Validaciones básicas
     if (!start || !end) {
       return res.status(400).json({ message: 'start y end son obligatorios' });
     }
@@ -95,7 +119,9 @@ async function modify(req, res, next) {
     });
 
     if (!updated) {
-      return res.status(404).json({ message: 'Reserva no encontrada o sin permiso para modificarla' });
+      return res
+        .status(404)
+        .json({ message: 'Reserva no encontrada o sin permiso para modificarla' });
     }
 
     res.json({
@@ -103,12 +129,12 @@ async function modify(req, res, next) {
       updated
     });
   } catch (e) {
-    if (process.env.NODE_ENV === 'development') console.error('Error al modificar reserva:', e);
+    console.error('Error al modificar reserva:', e);
     next(e);
   }
 }
 
-// ✅ Cancelar reserva
+// Cancelar reserva
 async function cancelCtrl(req, res, next) {
   try {
     const reservationId = req.params.id;
@@ -119,16 +145,34 @@ async function cancelCtrl(req, res, next) {
     });
 
     if (!canceled) {
-      return res.status(404).json({ message: 'Reserva no encontrada o sin permiso para cancelarla' });
+      return res
+        .status(404)
+        .json({ message: 'Reserva no encontrada o sin permiso para cancelarla' });
     }
 
-res.json({ message: 'Reserva cancelada exitosamente', status: 'canceled' });  } catch (e) {
-    if (process.env.NODE_ENV === 'development') console.error('Error al cancelar reserva:', e);
+    res.json({ message: 'Reserva cancelada exitosamente', status: 'canceled' });
+
+    try {
+      const { Reservation, User } = require('../models');
+      const reservation = await Reservation.findByPk(reservationId);
+      const user = await User.findByPk(reservation.user_id);
+
+      if (user && user.email) {
+        console.log(`Enviando correo de cancelación a ${user.email}`);
+        await sendReservationCancellation(user, reservation);
+      } else {
+        console.warn(`No se encontró correo electrónico válido para el usuario ID ${reservation.user_id}.`);
+      }
+    } catch (err) {
+      console.error('Error enviando correo de cancelación:', err.message);
+    }
+  } catch (e) {
+    console.error('Error al cancelar reserva:', e);
     next(e);
   }
 }
 
-// ✅ Historial de usuario
+// Historial de usuario
 async function myHistory(req, res, next) {
   try {
     const list = await Reservation.findAll({
@@ -137,39 +181,42 @@ async function myHistory(req, res, next) {
     });
 
     if (!list.length) {
-      return res.status(404).json({ message: 'No se encontraron reservas en el historial' });
+      return res
+        .status(404)
+        .json({ message: 'No se encontraron reservas en el historial' });
     }
 
     res.json(list);
   } catch (e) {
-    if (process.env.NODE_ENV === 'development') console.error('Error al obtener historial:', e);
+    console.error('Error al obtener historial:', e);
     next(e);
   }
 }
 
-// ✅ Obtener todas las reservas (usuario autenticado)
+// Obtener todas las reservas del usuario autenticado
 async function getAllReservations(req, res, next) {
   try {
     const list = await Reservation.findAll({
       where: { user_id: req.user.id },
       order: [['start_time', 'DESC']]
     });
+
     res.json(list);
   } catch (e) {
-    if (process.env.NODE_ENV === 'development') console.error('Error al obtener reservas:', e);
+    console.error('Error al obtener reservas:', e);
     next(e);
   }
 }
 
-
-// ✅ Unirse a lista de espera
+// Unirse a lista de espera
 async function joinWaitlistCtrl(req, res, next) {
   try {
     const { spaceId, start, end } = req.body;
 
-    // 🔍 Validaciones básicas
     if (!spaceId || !start || !end) {
-      return res.status(400).json({ message: 'spaceId, start y end son obligatorios' });
+      return res
+        .status(400)
+        .json({ message: 'spaceId, start y end son obligatorios' });
     }
 
     const startDate = dayjs(start).toDate();
@@ -187,12 +234,12 @@ async function joinWaitlistCtrl(req, res, next) {
       entry
     });
   } catch (e) {
-    if (process.env.NODE_ENV === 'development') console.error('Error al unirse a la lista de espera:', e);
+    console.error('Error al unirse a la lista de espera:', e);
     next(e);
   }
 }
 
-// ✅ Obtener la lista de espera del usuario autenticado
+// Obtener lista de espera
 async function getWaitlistCtrl(req, res, next) {
   try {
     const { WaitlistEntry } = require('../models');
@@ -202,15 +249,24 @@ async function getWaitlistCtrl(req, res, next) {
     });
 
     if (!list.length) {
-      return res.status(404).json({ message: 'No hay registros en la lista de espera.' });
+      return res
+        .status(404)
+        .json({ message: 'No hay registros en la lista de espera.' });
     }
 
     res.json(list);
   } catch (e) {
-    if (process.env.NODE_ENV === 'development') console.error('Error al obtener lista de espera:', e);
+    console.error('Error al obtener lista de espera:', e);
     next(e);
   }
 }
 
-module.exports = { create, modify, cancelCtrl, myHistory, joinWaitlistCtrl, getWaitlistCtrl, getAllReservations };
-
+module.exports = {
+  create,
+  modify,
+  cancelCtrl,
+  myHistory,
+  joinWaitlistCtrl,
+  getWaitlistCtrl,
+  getAllReservations
+};

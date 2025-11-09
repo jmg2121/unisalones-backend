@@ -1,3 +1,10 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Autenticación y gestión de usuarios
+ */
+
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { registerCtrl, loginCtrl } = require('../controllers/auth.controller');
@@ -16,7 +23,46 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-// 📌 Ruta: Registro de usuario
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Registro de un nuevo usuario
+ *     description: Permite registrar un nuevo usuario como administrador o estudiante.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - role
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Juan Pérez
+ *               email:
+ *                 type: string
+ *                 example: juan@unicomfacauca.edu.co
+ *               password:
+ *                 type: string
+ *                 example: 123456
+ *               role:
+ *                 type: string
+ *                 enum: [admin, student]
+ *                 example: student
+ *     responses:
+ *       201:
+ *         description: Usuario creado exitosamente.
+ *       400:
+ *         description: Datos inválidos.
+ *       422:
+ *         description: Error de validación.
+ */
 router.post(
   '/register',
   [
@@ -36,7 +82,37 @@ router.post(
   registerCtrl
 );
 
-// 📌 Ruta: Inicio de sesión
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Iniciar sesión en el sistema
+ *     description: Devuelve un token JWT si las credenciales son válidas.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: juan@unicomfacauca.edu.co
+ *               password:
+ *                 type: string
+ *                 example: 123456
+ *     responses:
+ *       200:
+ *         description: Inicio de sesión exitoso, devuelve token JWT.
+ *       400:
+ *         description: Credenciales inválidas.
+ *       422:
+ *         description: Error de validación.
+ */
 router.post(
   '/login',
   [
