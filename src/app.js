@@ -1,6 +1,8 @@
 const express = require('express');
-const cors = require('cors');
 const morgan = require('morgan');
+const helmet = require('helmet');
+const corsConfig = require('./config/corsConfig');          // 🧩 Nuevo
+const { authLimiter, globalLimiter } = require('./middlewares/rateLimit'); // 🧩 Nuevo
 const routes = require('./routes');
 const { errorHandler } = require('./middlewares/error');
 const { sequelize } = require('./models');
@@ -12,21 +14,45 @@ const { swaggerSpec } = require('./config/swagger');
 const app = express();
 
 // ---------------------------
+// Seguridad OWASP (Bloque D – Isabella)
+// ---------------------------
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // permite Swagger y Mailtrap
+  })
+);
+app.use(corsConfig);
+
+// Limitadores de peticiones
+if (process.env.NODE_ENV !== 'test') {
+  app.use(globalLimiter); // límite global
+}
+// ---------------------------
+// Fin Seguridad OWASP
+// ---------------------------
+
+// ---------------------------
 // Middlewares globales
 // ---------------------------
-app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
 // ---------------------------
 // Documentación Swagger
 // ---------------------------
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, { explorer: true })
+);
 
 // ---------------------------
 // Rutas principales
 // ---------------------------
 app.use('/api', routes);
+
+// ===== Calendar Endpoint (Bloque C – Johnatan) =====
+// app.use('/api/calendar', calendarRouter);
 
 // ---------------------------
 // Middleware global de manejo de errores (siempre al final)
@@ -38,16 +64,16 @@ app.use(errorHandler);
 // ---------------------------
 async function initDatabase() {
   try {
-    console.log(' Intentando conectar a la base de datos...');
+    console.log('🔍 Intentando conectar a la base de datos...');
     await sequelize.authenticate();
-    console.log(' Conexión a la base de datos exitosa.');
+    console.log('✅ Conexión a la base de datos exitosa.');
 
     if (['development', 'test'].includes(process.env.NODE_ENV)) {
       await sequelize.sync({ force: true });
-      console.log(' Tablas sincronizadas (modo desarrollo o test).');
+      console.log('✅ Tablas sincronizadas (modo desarrollo o test).');
     }
   } catch (err) {
-    console.error(' Error al conectar a la base de datos:', err);
+    console.error('❌ Error al conectar a la base de datos:', err);
   }
 }
 
@@ -60,9 +86,9 @@ const ready = initDatabase();
 async function closeDatabase() {
   try {
     await sequelize.close();
-    console.log('  Conexión a la base de datos cerrada correctamente.');
+    console.log('🧹 Conexión a la base de datos cerrada correctamente.');
   } catch (err) {
-    console.error('  Error cerrando la base de datos:', err);
+    console.error('💥 Error cerrando la base de datos:', err);
   }
 }
 
@@ -72,11 +98,11 @@ async function closeDatabase() {
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   const server = app.listen(PORT, () => {
-    console.log(` Servidor corriendo en http://localhost:${PORT}/api`);
-    console.log(` Documentación Swagger en http://localhost:${PORT}/api-docs`);
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}/api`);
+    console.log(`📘 Documentación Swagger en http://localhost:${PORT}/api-docs`);
   });
 
-  // Manejo elegante de cierre (Ctrl+C o kill)
+  // Manejo elegante de cierre (Ctrl + C o kill)
   process.on('SIGINT', async () => {
     console.log('\n🧹 Cerrando servidor...');
     await closeDatabase();

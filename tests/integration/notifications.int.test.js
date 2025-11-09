@@ -1,17 +1,14 @@
-// ✅ NUEVO EN SPRINT 2 – BLOQUE B
+// ✅ SPRINT 2 – BLOQUE B (corregido para Bloque D)
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const app = require('../../src/app');        // 👈 importante: sin destructuring
+const app = require('../../src/app');
 const { sequelize, User, Notification } = require('../../src/models');
 
 describe('HU-004 Notificaciones (integración)', () => {
   let tokenAdmin, tokenStudent, spaceId, reservationId;
 
   beforeAll(async () => {
-    // Esperar a que la BD esté lista (usa propiedad .ready del app)
     if (app.ready) await app.ready;
-
-    // Limpiar y sincronizar base de datos
     await sequelize.sync({ force: true });
 
     // Crear usuarios base
@@ -54,14 +51,13 @@ describe('HU-004 Notificaciones (integración)', () => {
       .set('Authorization', `Bearer ${tokenStudent}`)
       .send({
         spaceId,
-        start: '2025-11-10T10:00:00.000Z',
-        end: '2025-11-10T11:00:00.000Z'
+        startTime: '2025-11-10T10:00:00.000Z', // ✅ cambiado
+        endTime: '2025-11-10T11:00:00.000Z'    // ✅ cambiado
       });
 
     expect(res.status).toBe(201);
     reservationId = res.body.id;
 
-    // Esperar a que se registre la notificación
     await new Promise(r => setTimeout(r, 100));
 
     const notif = await Notification.findOne({ order: [['id', 'DESC']] });
@@ -77,7 +73,6 @@ describe('HU-004 Notificaciones (integración)', () => {
 
     expect(res.status).toBe(200);
 
-    // Esperar registro de notificación
     await new Promise(r => setTimeout(r, 100));
 
     const notif = await Notification.findOne({ order: [['id', 'DESC']] });

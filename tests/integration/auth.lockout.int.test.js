@@ -16,7 +16,8 @@ describe('Auth integration (registro, login y lockout)', () => {
     const reg = await request(app).post('/api/auth/register').send({
       name: 'Ana',
       email: 'ana@unicomfacauca.edu.co',
-      password: 'secret123'
+      password: 'secret123',
+      role: 'student'               // ✅ Campo obligatorio añadido
     });
     expect(reg.status).toBe(201);
 
@@ -58,5 +59,5 @@ describe('Auth integration (registro, login y lockout)', () => {
 
   afterAll(async () => {
     await sequelize.close();
-  });
+  });
 });
