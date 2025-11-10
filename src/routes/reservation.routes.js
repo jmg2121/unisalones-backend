@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../middlewares/auth');
+const { validateReservationCreate } = require('../middlewares/reservation.validators');
 const {
   create,
   modify,
@@ -7,7 +8,7 @@ const {
   myHistory,
   joinWaitlistCtrl,
   getAllReservations,
-  getWaitlistCtrl
+  getWaitlistCtrl,
 } = require('../controllers/reservation.controller');
 
 const router = express.Router();
@@ -47,15 +48,37 @@ const router = express.Router();
  *                 format: date-time
  *                 example: "2025-11-09T09:00:00Z"
  *     responses:
- *       201:
+ *       '201':
  *         description: Reserva creada exitosamente
- *       400:
- *         description: Error en los datos o conflicto de horario
- *       401:
+ *       '400':
+ *         description: Validación fallida
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Validación fallida
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: startTime inválido (ISO8601)
+ *                       param:
+ *                         type: string
+ *                         example: startTime
+ *                       location:
+ *                         type: string
+ *                         example: body
+ *       '401':
  *         description: Usuario no autenticado
  */
-// Crear nueva reserva
-router.post('/', authenticate, create);
+// Crear nueva reserva (con validación OWASP)
+router.post('/', authenticate, validateReservationCreate, create);
 
 /**
  * @swagger
@@ -87,11 +110,33 @@ router.post('/', authenticate, create);
  *                 type: string
  *                 format: date-time
  *     responses:
- *       200:
+ *       '200':
  *         description: Reserva modificada exitosamente
- *       400:
- *         description: Datos inválidos o conflicto de horario
- *       401:
+ *       '400':
+ *         description: Validación fallida o conflicto de horario
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Validación fallida
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: endTime inválido (ISO8601)
+ *                       param:
+ *                         type: string
+ *                         example: endTime
+ *                       location:
+ *                         type: string
+ *                         example: body
+ *       '401':
  *         description: Usuario no autenticado
  */
 // Modificar una reserva existente
@@ -114,11 +159,11 @@ router.patch('/:id', authenticate, modify);
  *           type: integer
  *         description: ID de la reserva a cancelar
  *     responses:
- *       200:
+ *       '200':
  *         description: Reserva cancelada exitosamente
- *       401:
+ *       '401':
  *         description: Usuario no autenticado
- *       404:
+ *       '404':
  *         description: Reserva no encontrada
  */
 // Cancelar una reserva
@@ -134,9 +179,9 @@ router.delete('/:id', authenticate, cancelCtrl);
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
+ *       '200':
  *         description: Historial de reservas del usuario
- *       401:
+ *       '401':
  *         description: No autenticado
  */
 // Listar reservas del usuario autenticado
@@ -152,9 +197,9 @@ router.get('/me', authenticate, myHistory);
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
+ *       '200':
  *         description: Lista completa de reservas
- *       401:
+ *       '401':
  *         description: No autenticado
  */
 // Listar todas las reservas (GET /api/reservations)
@@ -184,11 +229,11 @@ router.get('/', authenticate, getAllReservations);
  *                 format: date
  *                 example: "2025-11-10"
  *     responses:
- *       201:
+ *       '201':
  *         description: Usuario añadido a la lista de espera
- *       400:
+ *       '400':
  *         description: Error en los datos
- *       401:
+ *       '401':
  *         description: No autenticado
  */
 // Unirse a la lista de espera de un espacio ocupado
@@ -204,9 +249,9 @@ router.post('/waitlist', authenticate, joinWaitlistCtrl);
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
+ *       '200':
  *         description: Lista de espera del usuario
- *       401:
+ *       '401':
  *         description: No autenticado
  */
 // Obtener lista de espera del usuario autenticado
