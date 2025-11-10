@@ -1,8 +1,8 @@
-// 🧩 Middleware global de manejo de errores
+//  Middleware global de manejo de errores
 function errorHandler(err, req, res, next) {
   // Mostrar el error completo solo en desarrollo
   if (process.env.NODE_ENV === 'development') {
-    console.error('🛑 Error detectado:', err);
+    console.error(' Error detectado:', err);
   }
 
   // Si el error ya tiene un statusCode (definido manualmente en controladores)
@@ -14,7 +14,7 @@ function errorHandler(err, req, res, next) {
   });
 }
 
-// 🔍 Asigna un código de estado según el tipo de error
+// Asigna un código de estado según el tipo de error
 function getHttpStatus(err) {
   if (err.name === 'SequelizeValidationError') return 400;
   if (err.name === 'SequelizeUniqueConstraintError') return 409;

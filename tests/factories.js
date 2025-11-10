@@ -5,7 +5,7 @@ const { genReceiptCode } = require('./helpers');
 async function createUser(attrs = {}) {
   return User.create({
     name: 'Test User',
-    email: `test${Date.now()}@unicomfacauca.edu.co`, // ✅ correo institucional
+    email: `test${Date.now()}@unicomfacauca.edu.co`, // correo institucional
     password_hash: 'hash',
     ...attrs
   });

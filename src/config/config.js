@@ -8,9 +8,9 @@ const common = {
   logging: false
 };
 
-// 🚨 Verifica que haya al menos un nombre de base de datos en desarrollo
+// Verifica que haya al menos un nombre de base de datos en desarrollo
 if (!process.env.DB_NAME && process.env.NODE_ENV !== 'test') {
-  console.warn('⚠️  Falta definir DB_NAME en tu archivo .env');
+  console.warn(' Falta definir DB_NAME en tu archivo .env');
 }
 
 module.exports = {
@@ -26,7 +26,7 @@ module.exports = {
 
   test: {
     dialect: process.env.TEST_DB_DIALECT || 'sqlite',
-    // 💾 Puede ser ':memory:' o './tests/test.sqlite' si quieres persistir entre runs
+    // Puede ser ':memory:' o './tests/test.sqlite' si quieres persistir entre runs
     storage: process.env.TEST_DB_STORAGE || ':memory:',
     ...common
   },

@@ -1,6 +1,6 @@
 const { User } = require('../models');
 
-// 📋 Listar todos los usuarios
+// Listar todos los usuarios
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({

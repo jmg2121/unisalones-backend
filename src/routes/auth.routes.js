@@ -11,7 +11,7 @@ const { registerCtrl, loginCtrl } = require('../controllers/auth.controller');
 const { validateRegister, validateLogin } = require('../middlewares/validation.middlewares');
 const router = express.Router();
 
-// 🧩 Middleware reutilizable para manejar errores de validación
+// Middleware reutilizable para manejar errores de validación
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

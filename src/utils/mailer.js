@@ -23,14 +23,14 @@ async function sendMail({ to, subject, text, html }) {
       html
     };
 
-    console.log('📧 Enviando correo con opciones:', mailOptions);
+    console.log(' Enviando correo con opciones:', mailOptions);
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Correo enviado con éxito:', info.messageId || info.response);
+    console.log(' Correo enviado con éxito:', info.messageId || info.response);
 
     return info;
   } catch (error) {
-    console.error('❌ Error enviando correo:', error.message);
+    console.error(' Error enviando correo:', error.message);
     throw error;
   }
 }

@@ -1,7 +1,7 @@
 // middlewares/validation.middlewares.js
 const { body, validationResult } = require('express-validator');
 
-// 🧩 Validaciones para registro
+// Validaciones para registro
 const validateRegister = [
   body('name')
     .trim()
@@ -28,7 +28,7 @@ const validateRegister = [
   }
 ];
 
-// 🧩 Validaciones para inicio de sesión
+// Validaciones para inicio de sesión
 const validateLogin = [
   body('email')
     .isEmail()

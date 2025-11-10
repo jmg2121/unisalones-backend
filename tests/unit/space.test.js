@@ -1,4 +1,4 @@
-jest.setTimeout(15000); // ⏱ Aumenta el tiempo máximo a 15 segundos
+jest.setTimeout(15000); // Aumenta el tiempo máximo a 15 segundos
 
 const svc = require("../../src/services/space.service");
 const { sequelize, Reservation } = require("../../src/models");

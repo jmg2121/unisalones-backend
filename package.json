@@ -44,8 +44,15 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "roots": ["<rootDir>/tests"],
-    "moduleDirectories": ["node_modules", "src"],
-    "setupFilesAfterEnv": ["<rootDir>/tests/setupTests.js"]
+    "roots": [
+      "<rootDir>/tests"
+    ],
+    "moduleDirectories": [
+      "node_modules",
+      "src"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setupTests.js"
+    ]
   }
 }
