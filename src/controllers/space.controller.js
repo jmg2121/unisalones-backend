@@ -113,7 +113,7 @@ async function available(req, res) {
       return s;
     });
 
-    console.log("📦 RESPUESTA DISPONIBLES:", list);
+    console.log(" RESPUESTA DISPONIBLES:", list);
     return res.json(plain);
   } catch (e) {
     console.error("Error al buscar espacios disponibles:", e);

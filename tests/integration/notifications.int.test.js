@@ -1,4 +1,4 @@
-// ✅ NUEVO EN SPRINT 2 – BLOQUE B
+// NUEVO EN SPRINT 2 – BLOQUE B
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const app = require('../../src/app');        // 👈 importante: sin destructuring
@@ -47,7 +47,7 @@ describe('HU-004 Notificaciones (integración)', () => {
     spaceId = createSpace.body.space?.id || createSpace.body.id;
   });
 
-  // ✅ Prueba 1: Crear reserva genera notificación
+  //  Prueba 1: Crear reserva genera notificación
   test('crear reserva dispara notificación en DB', async () => {
     const res = await request(app)
       .post('/api/reservations')
@@ -69,7 +69,7 @@ describe('HU-004 Notificaciones (integración)', () => {
     expect(notif.message).toContain('Reserva confirmada');
   });
 
-  // ✅ Prueba 2: Cancelar reserva genera notificación
+  //  Prueba 2: Cancelar reserva genera notificación
   test('cancelar reserva dispara notificación en DB', async () => {
     const res = await request(app)
       .delete(`/api/reservations/${reservationId}`)

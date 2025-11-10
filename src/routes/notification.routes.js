@@ -4,10 +4,10 @@ const { getNotifications, markAsRead } = require('../controllers/notification.co
 
 const router = express.Router();
 
-// 📬 Obtener notificaciones del usuario autenticado
+// Obtener notificaciones del usuario autenticado
 router.get('/', authenticate, getNotifications);
 
-// 📨 Marcar una notificación como leída
+// Marcar una notificación como leída
 router.put('/:id/read', authenticate, markAsRead);
 
 module.exports = router;

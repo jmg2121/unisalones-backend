@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 
-// 🔐 Middleware de autenticación (versión limpia y robusta)
+// Middleware de autenticación (versión limpia y robusta)
 async function authenticate(req, res, next) {
   try {
     const header = req.headers.authorization || req.headers.Authorization || '';
@@ -28,7 +28,7 @@ async function authenticate(req, res, next) {
   }
 }
 
-// 🧩 Middleware de autorización (según rol)
+// Middleware de autorización (según rol)
 function authorize(roles = []) {
   return (req, res, next) => {
     if (!roles.length) return next();

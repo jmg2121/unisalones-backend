@@ -1,6 +1,6 @@
 const { register, login } = require("../services/auth.service");
 
-// ✅ Controlador para registro
+// Controlador para registro
 async function registerCtrl(req, res) {
   try {
     const { name, email, password, role } = req.body;
@@ -22,7 +22,7 @@ async function registerCtrl(req, res) {
   }
 }
 
-// ✅ Controlador para login
+// Controlador para login
 async function loginCtrl(req, res) {
   try {
     const { email, password } = req.body;
