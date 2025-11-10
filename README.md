@@ -1,23 +1,31 @@
 # 🎓 Unisalones -- Backend MVC (Express + Sequelize + TDD)
 
-Backend funcional para el sistema de **reserva y gestión de espacios académicos** en Unicomfacauca.  
-El proyecto sigue el **patrón MVC**, está desarrollado con **Node.js, Express y Sequelize**,  
-y se diseñó aplicando un enfoque **TDD (Desarrollo Guiado por Pruebas)** con **Jest y Supertest**.
+Backend funcional para el sistema de **reserva y gestión de espacios
+académicos** en Unicomfacauca.\
+El proyecto sigue el **patrón MVC**, está desarrollado con **Node.js,
+Express y Sequelize**,\
+y se diseñó aplicando un enfoque **TDD (Desarrollo Guiado por Pruebas)**
+con **Jest y Supertest**.
 
----
+------------------------------------------------------------------------
 
-##  Descripción del proyecto
+## 🧩 Descripción del proyecto
 
-**Unisalones** permite a los usuarios (administradores y estudiantes) gestionar la reserva de salones, laboratorios y otros espacios institucionales.  
-El sistema garantiza la disponibilidad, evita conflictos de horarios y ofrece funcionalidades para crear, consultar y cancelar reservas.
+**Unisalones** permite a los usuarios (administradores y estudiantes)
+gestionar la reserva de salones, laboratorios y otros espacios
+institucionales.\
+El sistema garantiza la disponibilidad, evita conflictos de horarios y
+ofrece funcionalidades para crear, consultar y cancelar reservas.
 
-**Objetivo:**  
-Implementar un backend escalable, documentado y probado que cumpla con los criterios de aceptación definidos en las historias de usuario del *Sprint Backlog*.
+**Objetivo:**\
+Implementar un backend escalable, documentado y probado que cumpla con
+los criterios de aceptación definidos en las historias de usuario del
+*Sprint Backlog*.
 
----
+------------------------------------------------------------------------
+## Arquitectura
 
-##  Arquitectura
-
+```
 src/
  ├─ models/          # Sequelize models (User, Space, Reservation, Notification)
  ├─ controllers/     # Controladores (auth, reservation, calendar, space)
@@ -27,17 +35,21 @@ src/
  ├─ config/          # DB, Email (Nodemailer), Swagger
  ├─ tests/           # Jest + Supertest (unit e integración)
  └─ app.js           # App Express (export para tests) + bootstrap DB (ready)
+```
 
 ---
 
-## ⚙️ Instalación
+## Instalación
 
-### 1️ Clonar e instalar dependencias
+1) Clonar e instalar dependencias
+```bash
 git clone https://github.com/jmg2121/unisalones-backend.git
 cd unisalones-backend
 npm install
+```
 
-### 2️ Variables de entorno (.env)
+2) Variables de entorno (`.env`)
+```bash
 PORT=3000
 DB_USER=root
 DB_PASS=root
@@ -63,40 +75,55 @@ RATE_LIMIT_MAX_GLOBAL=100
 JWT_EXPIRES=1h
 LOCK_MINUTES=15
 INSTITUTIONAL_DOMAIN=@unicomfacauca.edu.co
+```
 
 ---
 
-## ▶ Ejecución
+## Ejecución
 
 Desarrollo
+```bash
 npm run dev
+```
 
 Producción
+```bash
 npm start
+```
 
 ---
 
-##  Pruebas (TDD)
+## Pruebas (TDD)
 
 Todo
+```bash
 npm test
+```
 
 Un archivo específico
+```bash
 npm test -- tests/integration/notifications.int.test.js
+```
 
 Un patrón
+```bash
 npm test -- -t "calendar"
+```
 
 Salida esperada (ejemplo)
+```
 Test Suites: 12 passed, 12 total
 Tests:       21 passed, 21 total
+```
 
 ---
 
-##  Bloque A – Swagger (Documentación de la API)
+## Bloque A – Swagger (Documentación de la API)
 
 Acceso
+```
 http://localhost:3000/api-docs
+```
 
 Rutas documentadas
 - /api/auth
@@ -106,102 +133,113 @@ Rutas documentadas
 - /api/health
 
 Scripts
+```bash
 npm run swagger:gen
 npm run swagger:check
+```
 
 Riesgos y rollback
+
 - Incompatibilidad de versiones → fijadas en package.json.
-- JSDoc roto → ejecutar swagger:check antes de subir.
-- Rollback: npm uninstall swagger-ui-express swagger-jsdoc y remover bloque Swagger en app.js.
+- JSDoc roto → ejecutar `swagger:check` antes de subir.
+- Rollback: `npm uninstall swagger-ui-express swagger-jsdoc` y remover bloque Swagger en `app.js`.
 
 ---
 
-##  Bloque B – Notificaciones por Correo
+## Bloque B – Notificaciones por Correo
 
 Descripción  
-Al crear/cancelar reservas se envían correos con Nodemailer (Mailtrap) y se registra un evento en notifications.
+Al crear/cancelar reservas se envían correos con **Nodemailer** (Mailtrap) y se registra un evento en `notifications`.
 
 Flujo
-- Reserva creada → correo “Reserva confirmada” + registro notifications.
-- Reserva cancelada → correo “Reserva cancelada” + registro notifications.
+- Reserva creada → correo “Reserva confirmada” + registro `notifications`.
+- Reserva cancelada → correo “Reserva cancelada” + registro `notifications`.
 
 Prueba de humo
+```bash
 npm run email:smoke
+```
 
 Riesgos y mitigación
 | Riesgo | Mitigación |
-|-------|-------------|
-| SMTP caído o credenciales malas | Envío asíncrono; no bloquea la reserva |
-| Usuario sin email | Validación previa (user.email) |
-| Plantillas HTML | Plantillas simples y verificadas |
+|-------|------------|
+| SMTP caído/credenciales malas | Envío asíncrono y logs; no bloquea la reserva |
+| Usuario sin email | Validación previa (`user.email`) |
+| Plantillas HTML | Plantillas simples y probadas |
 
 Rollback
-- Quitar llamadas a sendReservationConfirmation / sendReservationCancellation del controller.
-- Eliminar src/config/email.js y src/services/templates/emailTemplates.js.
-- Limpiar variables SMTP en .env.
-- Borrar tests de notificaciones.
+- Quitar llamadas a `sendReservationConfirmation`/`sendReservationCancellation` del controller.
+- Borrar `src/config/email.js` y `src/services/templates/emailTemplates.js`.
+- Limpiar variables SMTP en `.env`.
+- Eliminar tests de notificaciones.
 
 ---
 
-##  Bloque C – Calendario de Disponibilidad
+## Bloque C – Calendario de Disponibilidad
 
 Endpoint
+```
 GET /api/calendar
+```
 
 Parámetros
-- range: day o week
-- date: YYYY-MM-DD
+- range: `day` o `week`
+- date: `YYYY-MM-DD`
 - spaceId: opcional (filtra por espacio)
 
 Criterios de aceptación
 - Devuelve franjas por día/semana.
-- Detecta solapamientos con Reservation.
-- Soporta spaceId.
+- Detecta solapamientos con `Reservation`.
+- Soporta `spaceId`.
 - Documentado en Swagger.
 - Tests de integración con Supertest.
 
 Ejemplos
+```
 GET /api/calendar?range=day&date=2025-11-10
 GET /api/calendar?range=week&date=2025-11-10&spaceId=1
+```
 
 Notas de rendimiento
-- Índices recomendados: Reservation(space_id, start_time, end_time, status).
-- Consultas por rango usando start_time < end AND end_time > start.
+- Índices recomendados: `Reservation(space_id, start_time, end_time, status)`.
+- Consultas por rango usando `start_time < end AND end_time > start`.
 
 ---
 
-##  Bloque D – Seguridad (alineado a OWASP)
+## Bloque D – Seguridad (alineado a OWASP)
 
 Controles implementados
 
 1) Autenticación y control de acceso  
-JWT con expiración (JWT_EXPIRES) y roles admin/student.
+- JWT con expiración (`JWT_EXPIRES`) y verificación en middleware.  
+- Roles básicos: admin, student (autorización por endpoint).
 
 2) Dominio institucional  
-Login restringido a correos @unicomfacauca.edu.co.
+- Registro/Login restringido a correos que terminan en `INSTITUTIONAL_DOMAIN`.
 
 3) Lockout por intentos fallidos  
-Bloqueo temporal por LOCK_MINUTES.
+- Tras 3 intentos fallidos, bloqueo temporal por `LOCK_MINUTES`.
 
 4) Rate limiting  
-Límites globales y en rutas sensibles (auth).
+- Límites para rutas sensibles (auth) y globales (`RATE_LIMIT_MAX_AUTH`, `RATE_LIMIT_MAX_GLOBAL`).
 
 5) CORS estricto  
-Orígenes permitidos desde CORS_ORIGINS.
+- Orígenes permitidos desde `CORS_ORIGINS`.
 
 6) Gestión de secretos  
-Variables .env no versionadas.
+- Variables en `.env` (no versionadas).
 
 7) Validación y saneamiento  
-Express-validator en body/query/params.
+- Validaciones en body/query/params y manejo centralizado de errores.
 
 Riesgos y rollback
+
 | Riesgo | Descripción | Rollback |
 |-------|-------------|----------|
-| Bloqueos falsos | Lockout por contraseñas mal ingresadas | Reducir LOCK_MINUTES |
-| Expiración agresiva | JWT expira muy rápido | Aumentar JWT_EXPIRES |
-| Orígenes bloqueados | CORS niega clientes válidos | Ampliar CORS_ORIGINS |
-| Límite bajo | Rate limit corta tráfico normal | Subir RATE_LIMIT_MAX_* |
+| Bloqueos falsos | Lockout por contraseñas mal ingresadas | Reducir `LOCK_MINUTES` o desactivar lockout |
+| Expiración agresiva | JWT expira muy rápido | Ajustar `JWT_EXPIRES` |
+| Orígenes bloqueados | CORS niega clientes válidos | Ampliar `CORS_ORIGINS` |
+| Límite muy bajo | Rate limit corta tráfico normal | Subir `RATE_LIMIT_MAX_*` |
 
 ---
 
@@ -226,24 +264,24 @@ Verificado: conexión MySQL, JWT y Mailtrap activos.
 Incluye instalación, .env, Swagger, OWASP, Mailtrap, endpoints, checklist.
 
 4) Checklist final
-/api-docs responde 200 ✅  
-Auth OK ✅  
-Spaces CRUD ✅  
-Reservations + Mailtrap ✅  
-Calendar ✅  
-Rate limit ✅  
-README ✅  
-.env correcto ✅  
-Tests ✅
+/api-docs responde 200   
+Auth OK   
+Spaces CRUD   
+Reservations + Mailtrap   
+Calendar   
+Rate limit   
+README   
+.env correcto   
+Tests 
 
 Commit sugerido:
 git add README.md
 git commit -m "docs: actualización README Sprint 2 — Bloque E final (pruebas y verificación)"
-git push origin main
+git push origin mai
 
 ---
 
-##  Modelos
+## Modelos
 
 - User: id, name, email, password_hash, role, failed_attempts, lock_until
 - Space: id, name, type, capacity, is_active
@@ -253,7 +291,7 @@ git push origin main
 
 ---
 
-##  Endpoints clave
+## Endpoints clave
 
 Auth
 - POST /api/auth/register
@@ -276,41 +314,52 @@ Health
 
 ---
 
-##  Datos de prueba rápidos (Swagger)
+## Datos de prueba rápidos (Swagger)
 
 1) Registrar admin y estudiante
+```json
 POST /api/auth/register
 { "name": "Admin Prueba", "email": "admin@unicomfacauca.edu.co", "password": "secret123" }
 
 POST /api/auth/register
 { "name": "Estudiante Prueba", "email": "estudiante@unicomfacauca.edu.co", "password": "secret123" }
+```
 
 2) Login y copiar tokens
+```json
 POST /api/auth/login
 { "email": "admin@unicomfacauca.edu.co", "password": "secret123" }
 
 POST /api/auth/login
 { "email": "estudiante@unicomfacauca.edu.co", "password": "secret123" }
+```
 
 3) Crear espacio (con token de admin en Authorization: Bearer …)
+```json
 POST /api/spaces
 { "name": "Laboratorio A-101", "type": "laboratory", "capacity": 30 }
+```
 
 4) Crear reserva (con token de estudiante)
+```json
 POST /api/reservations
 {
   "spaceId": 1,
   "start": "2025-11-10T21:00:00.000Z",
   "end":   "2025-11-10T22:00:00.000Z"
 }
+```
 
-5) Cancelar reserva
+5) Cancelar reserva (usar el id devuelto al crearla)
+```
 DELETE /api/reservations/1
+```
 
 ---
 
-##  Scripts útiles
+## Scripts útiles
 
+```json
 "scripts": {
   "dev": "nodemon src/server.js",
   "start": "node src/server.js",
@@ -322,25 +371,31 @@ DELETE /api/reservations/1
   "swagger:gen": "node ./src/config/swagger-build.js",
   "email:smoke": "node src/scripts/email-smoke.js"
 }
+```
 
 ---
 
-##  Equipo
+## Equipo
 
-- Gabriel – Backend y autenticación
-- Camila – Reservas y notificaciones
-- Isabella – Modelos y rutas
-- Johnatan – Pruebas e integración
-- Juan José Muñoz Garzón – Coordinación y documentación
+- Gabriel Esteban Manquillo
+- Camila Gomez Rengifo
+- Isabella Sanchez Torres
+- Johnatan Oritz Gaviria
+- Juan José Muñoz Garzón 
 
 ---
 
-##  Tecnologías
+## Tecnologías
 
 Node.js, Express, Sequelize, SQLite/MySQL, JWT, Jest, Supertest, Swagger UI, Nodemailer (Mailtrap), dotenv, Nodemon
 
 ---
 
-## 📄 Licencia
+## Licencia
 
 Proyecto académico – Ingeniería de Software II, Unicomfacauca (2025).
+
+
+
+
+
