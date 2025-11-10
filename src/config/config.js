@@ -18,7 +18,7 @@ module.exports = {
     dialect: process.env.DB_DIALECT || 'mysql',
     host: process.env.DB_HOST || '127.0.0.1',
     port: process.env.DB_PORT || 3306,
-    database: process.env.DB_NAME || 'unisalon',
+    database: process.env.DB_NAME || 'unisalones_db',
     username: process.env.DB_USER || 'root',
     password: process.env.DB_PASS || 'root',
     ...common

@@ -1,8 +1,8 @@
 const express = require('express');
 const morgan = require('morgan');
 const helmet = require('helmet');
-const corsConfig = require('./config/corsConfig');          // 🧩 Nuevo
-const { authLimiter, globalLimiter } = require('./middlewares/rateLimit'); // 🧩 Nuevo
+const corsConfig = require('./config/corsConfig');          // 
+const { authLimiter, globalLimiter } = require('./middlewares/rateLimit'); // 
 const routes = require('./routes');
 const { errorHandler } = require('./middlewares/error');
 const { sequelize } = require('./models');
