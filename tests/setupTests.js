@@ -1,7 +1,7 @@
 // tests/setupTests.js
-// ------------------------------------------------------------
 // Silencia logs innecesarios durante las pruebas con Jest
-// ------------------------------------------------------------
+require('dotenv').config({ path: '.env.test' });
+
 if (process.env.NODE_ENV === 'test') {
   const originalLog = console.log;
   const originalError = console.error;

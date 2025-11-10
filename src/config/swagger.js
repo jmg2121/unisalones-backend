@@ -67,7 +67,7 @@ const swaggerDefinition = {
       }
     }
   },
-  // 🔐 NUEVO EN SPRINT 2 – BLOQUE A: seguridad global JWT
+  // NUEVO EN SPRINT 2 – BLOQUE A: seguridad global JWT
   security: [
     {
       bearerAuth: []

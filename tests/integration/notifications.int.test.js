@@ -1,4 +1,4 @@
-// ✅ SPRINT 2 – BLOQUE B (corregido para Bloque D)
+//  SPRINT 2 – BLOQUE D (Corregido para Bloque D)
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const app = require('../../src/app');
@@ -44,15 +44,15 @@ describe('HU-004 Notificaciones (integración)', () => {
     spaceId = createSpace.body.space?.id || createSpace.body.id;
   });
 
-  // ✅ Prueba 1: Crear reserva genera notificación
+  // 🧪 Prueba 1: Crear reserva genera notificación
   test('crear reserva dispara notificación en DB', async () => {
     const res = await request(app)
       .post('/api/reservations')
       .set('Authorization', `Bearer ${tokenStudent}`)
       .send({
         spaceId,
-        startTime: '2025-11-10T10:00:00.000Z', // ✅ cambiado
-        endTime: '2025-11-10T11:00:00.000Z'    // ✅ cambiado
+        startTime: '2025-11-10T10:00:00.000Z',
+        endTime: '2025-11-10T11:00:00.000Z'
       });
 
     expect(res.status).toBe(201);
@@ -65,7 +65,7 @@ describe('HU-004 Notificaciones (integración)', () => {
     expect(notif.message).toContain('Reserva confirmada');
   });
 
-  // ✅ Prueba 2: Cancelar reserva genera notificación
+  // 🧪 Prueba 2: Cancelar reserva genera notificación
   test('cancelar reserva dispara notificación en DB', async () => {
     const res = await request(app)
       .delete(`/api/reservations/${reservationId}`)
@@ -84,3 +84,4 @@ describe('HU-004 Notificaciones (integración)', () => {
     await sequelize.close();
   });
 });
+

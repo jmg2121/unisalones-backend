@@ -3,9 +3,9 @@
 const nodemailer = require('nodemailer');
 
 function buildTransport() {
-  // 🧪 En entorno de pruebas: simula el envío (no usa Internet)
+  // En entorno de pruebas: simula el envío 
   if (process.env.NODE_ENV === 'test') {
-    console.log('📦 Transporter en modo TEST (streamTransport)');
+    console.log(' Transporter en modo TEST (streamTransport)');
     return nodemailer.createTransport({
       streamTransport: true,
       newline: 'unix',
@@ -13,7 +13,7 @@ function buildTransport() {
     });
   }
 
-  // 💻 En desarrollo o producción: usa Mailtrap (SMTP real)
+  // En desarrollo o producción: usa Mailtrap 
   const transport = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 2525),
@@ -27,8 +27,8 @@ function buildTransport() {
   // Verificar conexión al arrancar
   transport
     .verify()
-    .then(() => console.log('✅ Servidor SMTP listo para enviar correos (Mailtrap).'))
-    .catch(err => console.error('❌ Error al conectar con SMTP:', err.message));
+    .then(() => console.log(' Servidor SMTP listo para enviar correos (Mailtrap).'))
+    .catch(err => console.error(' Error al conectar con SMTP:', err.message));
 
   return transport;
 }

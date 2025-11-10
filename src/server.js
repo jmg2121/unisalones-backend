@@ -1,4 +1,4 @@
-console.log("🚀 Iniciando backend Unisalones...");
+console.log(" Iniciando backend Unisalones...");
 
 require('dotenv').config();
 const app = require('./app');

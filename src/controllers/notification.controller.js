@@ -1,6 +1,6 @@
 const { Notification } = require('../models');
 
-// 📬 Obtener todas las notificaciones del usuario autenticado
+// Obtener todas las notificaciones del usuario autenticado
 async function getNotifications(req, res, next) {
   try {
     const notifications = await Notification.findAll({
@@ -19,7 +19,7 @@ async function getNotifications(req, res, next) {
   }
 }
 
-// 📨 Marcar una notificación como leída
+// Marcar una notificación como leída
 async function markAsRead(req, res, next) {
   try {
     const { id } = req.params;

@@ -1,4 +1,4 @@
-// ✅ NUEVO EN SPRINT 2 – BLOQUE B
+// NUEVO EN SPRINT 2 – BLOQUE B
 jest.mock('nodemailer', () => ({
   createTransport: jest.fn(() => ({
     sendMail: jest.fn().mockResolvedValue({ messageId: 'test-id' })
