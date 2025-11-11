@@ -1,8 +1,8 @@
 const express = require('express');
 const morgan = require('morgan');
 const helmet = require('helmet');
-const corsConfig = require('./config/corsConfig');
-const { authLimiter, globalLimiter } = require('./middlewares/rateLimit');
+const corsConfig = require('./config/corsConfig'); // configuración CORS
+const { authLimiter, globalLimiter } = require('./middlewares/rateLimit'); // límites de peticiones
 const routes = require('./routes');
 const { errorHandler } = require('./middlewares/error');
 const { sequelize } = require('./models');
@@ -14,18 +14,19 @@ const { swaggerSpec } = require('./config/swagger');
 const app = express();
 
 // ==========================================================
-//  Seguridad OWASP (Bloque D – Isabella)
+// Seguridad OWASP (Bloque D – Isabella)
 // ==========================================================
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' }, // permite Swagger y Mailtrap
   })
 );
-app.use(corsConfig);
+app.use(corsConfig());
 
 // Limitadores de peticiones
 if (process.env.NODE_ENV !== 'test') {
   app.use(globalLimiter); // límite global
+  app.use('/api/auth', authLimiter); // límite específico para rutas de autenticación
 }
 // ==========================================================
 // Fin Seguridad OWASP
@@ -40,11 +41,7 @@ app.use(morgan('dev'));
 // ==========================================================
 // Documentación Swagger
 // ==========================================================
-app.use(
-  '/api-docs',
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, { explorer: true })
-);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 // ==========================================================
 // Rutas principales
@@ -57,27 +54,27 @@ app.use('/api', routes);
 app.use(errorHandler);
 
 // ==========================================================
-//  Inicialización segura de la base de datos
+// Inicialización segura de la base de datos
 // ==========================================================
 async function initDatabase() {
   try {
-    console.log(' Intentando conectar a la base de datos...');
+    console.log('Intentando conectar a la base de datos...');
     await sequelize.authenticate();
-    console.log(' Conexión a la base de datos exitosa.');
+    console.log('Conexión a la base de datos exitosa.');
 
     const env = process.env.NODE_ENV || 'development';
 
     if (env === 'development') {
       await sequelize.sync({ alter: false });
-      console.log(' Sincronización no forzada: tus datos están preservados.');
+      console.log('Sincronización no forzada: tus datos están preservados.');
     } else if (env === 'test') {
       await sequelize.sync({ force: true });
-      console.log(' Modo test: sincronización forzada solo para pruebas.');
+      console.log('Modo test: sincronización forzada solo para pruebas.');
     } else {
-      console.log(' Modo producción: sin sincronización automática.');
+      console.log('Modo producción: sin sincronización automática.');
     }
   } catch (err) {
-    console.error(' Error al conectar o sincronizar la base de datos:', err);
+    console.error('Error al conectar o sincronizar la base de datos:', err);
   }
 }
 
@@ -85,7 +82,7 @@ async function initDatabase() {
 const ready = initDatabase();
 
 // ==========================================================
-//  Cierre seguro para Jest o entornos de prueba
+// Cierre seguro para Jest o entornos de prueba
 // ==========================================================
 async function closeDatabase() {
   try {
@@ -97,13 +94,13 @@ async function closeDatabase() {
 }
 
 // ==========================================================
-//  Ejecución directa del servidor
+// Ejecución directa del servidor
 // ==========================================================
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   const server = app.listen(PORT, () => {
-    console.log(` Servidor corriendo en http://localhost:${PORT}/api`);
-    console.log(` Documentación Swagger en http://localhost:${PORT}/api-docs`);
+    console.log(`Servidor corriendo en http://localhost:${PORT}/api`);
+    console.log(`Documentación Swagger en http://localhost:${PORT}/api-docs`);
   });
 
   // Cierre elegante al detener el servidor
@@ -120,3 +117,4 @@ if (require.main === module) {
 module.exports = app;
 module.exports.ready = ready;
 module.exports.closeDatabase = closeDatabase;
+
