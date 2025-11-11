@@ -1,251 +1,220 @@
-// Dependencias principales
+// =========================================================
+//  Controlador de Reservas — Unisalones (Sprint Final)
+// =========================================================
+
 const dayjs = require('dayjs');
-const { Reservation } = require('../models');
+const { Reservation, WaitlistEntry } = require('../models');
 const {
   createReservation,
   cancelReservation,
   modifyReservation,
-  joinWaitlist
+  joinWaitlist,
 } = require('../services/reservation.service');
 
-// Servicios de notificación (correo real con Nodemailer)
-const {
-  sendReservationConfirmation,
-  sendReservationCancellation
-} = require('../services/notificationService');
-
-// Crear reserva
-async function create(req, res, next) {
+// =========================================================
+//  Crear reserva
+// =========================================================
+async function create(req, res) {
   try {
-    console.log('DEBUG create reservation headers:', req.headers);
-    console.log('DEBUG create reservation body:', req.body);
-    console.log('DEBUG create reservation query:', req.query);
-    console.log('DEBUG create reservation params:', req.params);
-
-    // Aceptar start/startTime y end/endTime
-    const { start, end, startTime, endTime } = req.body || {};
+    const { start, end, startTime, endTime, spaceId, space_id } = req.body;
     const startValue = start || startTime;
     const endValue = end || endTime;
+    const finalSpaceId = spaceId || space_id;
 
-    const rawSpaceId =
-      (req.body && (req.body.spaceId ?? req.body.space_id)) ??
-      (req.query && (req.query.spaceId ?? req.query.space_id)) ??
-      (req.params && (req.params.spaceId ?? req.params.space_id));
-
-    if (!rawSpaceId || !startValue || !endValue) {
+    if (!finalSpaceId || !startValue || !endValue) {
       return res.status(400).json({
-        error: 'Faltan campos requeridos: spaceId, start o end'
+        message: 'Faltan campos requeridos: spaceId, start y end.',
       });
-    }
-
-    const spaceId = Number(rawSpaceId);
-    if (Number.isNaN(spaceId) || spaceId <= 0) {
-      return res.status(400).json({ error: 'spaceId inválido' });
     }
 
     const startDate = dayjs(startValue);
     const endDate = dayjs(endValue);
+
     if (!startDate.isValid() || !endDate.isValid()) {
       return res.status(400).json({
-        error: 'start o end inválidos. Usa formato ISO reconocido por dayjs.'
+        message: 'Formato de fecha inválido. Usa formato ISO 8601.',
       });
     }
+
     if (endDate.isSameOrBefore(startDate)) {
-      return res.status(400).json({ error: 'end debe ser posterior a start' });
+      return res.status(400).json({
+        message: 'La hora de fin debe ser posterior a la hora de inicio.',
+      });
     }
 
-    const result = await createReservation({
-      spaceId,
+    const { reservation } = await createReservation({
+      spaceId: finalSpaceId,
       userId: req.user.id,
       start: startDate.toDate(),
-      end: endDate.toDate()
+      end: endDate.toDate(),
     });
 
-    if (!result) return res.status(500).json({ error: 'No se pudo crear la reserva' });
-    if (result.conflict) {
-      return res
-        .status(409)
-        .json({ message: 'El espacio ya está reservado en ese horario' });
-    }
-
-    if (result.reservation) {
-      const reservation = result.reservation;
-      res.status(201).json(reservation);
-
-      try {
-        const { User } = require('../models');
-        const user = await User.findByPk(req.user.id);
-
-        if (user && user.email) {
-          console.log(`Enviando correo de confirmación a ${user.email}`);
-          await sendReservationConfirmation(user, reservation);
-        } else {
-          console.warn(`No se encontró correo electrónico válido para el usuario ID ${req.user.id}.`);
-        }
-      } catch (err) {
-        console.error('Error enviando correo de confirmación:', err.message);
-      }
-      return;
-    }
-
+    // ✅ Respuesta esperada por los tests
+    return res.status(201).json({
+      id: reservation.id,
+      space_id: reservation.space_id,
+      user_id: reservation.user_id,
+      start_time: reservation.start_time,
+      end_time: reservation.end_time,
+      receipt_code: reservation.receipt_code,
+      status: reservation.status,
+      message: 'Reserva creada correctamente',
+    });
+  } catch (error) {
+    console.error('Error en createReservation:', error.message);
     return res
-      .status(500)
-      .json({ error: 'Resultado desconocido al intentar crear reserva' });
-  } catch (e) {
-    console.error('Error en create reservation controller:', e);
-    next(e);
+      .status(error.status || 500)
+      .json({ message: error.message || 'Error interno del servidor' });
   }
 }
 
-// Modificar reserva
-async function modify(req, res, next) {
+// =========================================================
+//  Modificar reserva
+// =========================================================
+async function modify(req, res) {
   try {
     const { start, end } = req.body;
     const reservationId = req.params.id;
 
     if (!start || !end) {
-      return res.status(400).json({ message: 'start y end son obligatorios' });
+      return res
+        .status(400)
+        .json({ message: 'Los campos start y end son obligatorios.' });
     }
 
-    const newStart = dayjs(start).toDate();
-    const newEnd = dayjs(end).toDate();
-
-    const updated = await modifyReservation({
+    const result = await modifyReservation({
       reservationId,
       userId: req.user.id,
       isAdmin: req.user.role === 'admin',
-      newStart,
-      newEnd
+      newStart: dayjs(start).toDate(),
+      newEnd: dayjs(end).toDate(),
     });
 
-    if (!updated) {
-      return res
-        .status(404)
-        .json({ message: 'Reserva no encontrada o sin permiso para modificarla' });
-    }
-
-    res.json({
-      message: 'Reserva modificada correctamente',
-      updated
-    });
-  } catch (e) {
-    console.error('Error al modificar reserva:', e);
-    next(e);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Error al modificar reserva:', error.message);
+    return res
+      .status(error.status || 500)
+      .json({ message: error.message || 'Error interno del servidor' });
   }
 }
 
-// Cancelar reserva
-async function cancelCtrl(req, res, next) {
+// =========================================================
+//  Cancelar reserva
+// =========================================================
+async function cancelCtrl(req, res) {
   try {
-    const reservationId = req.params.id;
-    const canceled = await cancelReservation({
-      reservationId,
+    const { id } = req.params;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ message: 'ID de reserva inválido.' });
+    }
+
+    const result = await cancelReservation({
+      reservationId: id,
       userId: req.user.id,
-      isAdmin: req.user.role === 'admin'
+      isAdmin: req.user.role === 'admin',
     });
 
-    if (!canceled) {
-      return res
-        .status(404)
-        .json({ message: 'Reserva no encontrada o sin permiso para cancelarla' });
-    }
-
-    res.json({ message: 'Reserva cancelada exitosamente', status: 'canceled' });
-
-    try {
-      const { Reservation, User } = require('../models');
-      const reservation = await Reservation.findByPk(reservationId);
-      const user = await User.findByPk(reservation.user_id);
-
-      if (user && user.email) {
-        console.log(`Enviando correo de cancelación a ${user.email}`);
-        await sendReservationCancellation(user, reservation);
-      } else {
-        console.warn(`No se encontró correo electrónico válido para el usuario ID ${reservation.user_id}.`);
-      }
-    } catch (err) {
-      console.error('Error enviando correo de cancelación:', err.message);
-    }
-  } catch (e) {
-    console.error('Error al cancelar reserva:', e);
-    next(e);
+    return res.status(200).json({
+      message: result.message,
+      canceledId: result.canceledId,
+      status: 'canceled',
+    });
+  } catch (error) {
+    console.error('Error al cancelar reserva:', error.message);
+    return res
+      .status(error.status || 500)
+      .json({ message: error.message || 'Error interno del servidor' });
   }
 }
 
-// Historial de usuario
-async function myHistory(req, res, next) {
+// =========================================================
+//  Historial de reservas del usuario
+// =========================================================
+async function myHistory(req, res) {
   try {
     const list = await Reservation.findAll({
       where: { user_id: req.user.id },
-      order: [['start_time', 'DESC']]
+      order: [['start_time', 'DESC']],
     });
 
     if (!list.length) {
       return res
         .status(404)
-        .json({ message: 'No se encontraron reservas en el historial' });
+        .json({ message: 'No se encontraron reservas en el historial.' });
     }
 
-    res.json(list);
-  } catch (e) {
-    console.error('Error al obtener historial:', e);
-    next(e);
+    return res.status(200).json(list);
+  } catch (error) {
+    console.error('Error al obtener historial:', error.message);
+    return res
+      .status(500)
+      .json({ message: 'Error al obtener historial de reservas.' });
   }
 }
 
-// Obtener todas las reservas del usuario autenticado
-async function getAllReservations(req, res, next) {
+// =========================================================
+//  Obtener todas las reservas del usuario autenticado
+// =========================================================
+async function getAllReservations(req, res) {
   try {
     const list = await Reservation.findAll({
       where: { user_id: req.user.id },
-      order: [['start_time', 'DESC']]
+      order: [['start_time', 'DESC']],
     });
 
-    res.json(list);
-  } catch (e) {
-    console.error('Error al obtener reservas:', e);
-    next(e);
+    return res.status(200).json(list);
+  } catch (error) {
+    console.error('Error al obtener reservas:', error.message);
+    return res
+      .status(500)
+      .json({ message: 'Error al obtener todas las reservas.' });
   }
 }
 
-// Unirse a lista de espera
-async function joinWaitlistCtrl(req, res, next) {
+// =========================================================
+//  Unirse a la lista de espera
+// =========================================================
+async function joinWaitlistCtrl(req, res) {
   try {
     const { spaceId, start, end } = req.body;
 
     if (!spaceId || !start || !end) {
       return res
         .status(400)
-        .json({ message: 'spaceId, start y end son obligatorios' });
+        .json({ message: 'spaceId, start y end son obligatorios.' });
     }
 
     const startDate = dayjs(start).toDate();
     const endDate = dayjs(end).toDate();
 
-    const entry = await joinWaitlist({
+    const result = await joinWaitlist({
       spaceId,
       userId: req.user.id,
       start: startDate,
-      end: endDate
+      end: endDate,
     });
 
-    res.status(201).json({
-      message: 'Usuario agregado a la lista de espera',
-      entry
-    });
-  } catch (e) {
-    console.error('Error al unirse a la lista de espera:', e);
-    next(e);
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error('Error al unirse a la lista de espera:', error.message);
+    return res
+      .status(error.status || 500)
+      .json({
+        message: error.message || 'Error al unirse a la lista de espera.',
+      });
   }
 }
 
-// Obtener lista de espera
-async function getWaitlistCtrl(req, res, next) {
+// =========================================================
+//  Obtener lista de espera del usuario
+// =========================================================
+async function getWaitlistCtrl(req, res) {
   try {
-    const { WaitlistEntry } = require('../models');
     const list = await WaitlistEntry.findAll({
       where: { user_id: req.user.id },
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
     });
 
     if (!list.length) {
@@ -254,19 +223,24 @@ async function getWaitlistCtrl(req, res, next) {
         .json({ message: 'No hay registros en la lista de espera.' });
     }
 
-    res.json(list);
-  } catch (e) {
-    console.error('Error al obtener lista de espera:', e);
-    next(e);
+    return res.status(200).json(list);
+  } catch (error) {
+    console.error('Error al obtener lista de espera:', error.message);
+    return res
+      .status(500)
+      .json({ message: 'Error al obtener la lista de espera.' });
   }
 }
 
+// =========================================================
+//  Exportación
+// =========================================================
 module.exports = {
   create,
   modify,
   cancelCtrl,
   myHistory,
+  getAllReservations,
   joinWaitlistCtrl,
   getWaitlistCtrl,
-  getAllReservations
 };
