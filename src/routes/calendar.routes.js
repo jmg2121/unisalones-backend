@@ -16,7 +16,7 @@ const { getCalendar } = require('../controllers/calendar.controller');
  * /calendar:
  *   get:
  *     tags: [Calendar]
- *     summary: Calendario de disponibilidad diaria o semanal
+ *     summary: Calendario de disponibilidad diaria o semanal (UH:233)
  *     description: |
  *       - Con `spaceId`: cada slot es `available` o `reserved` (+ `reservationId`).  
  *       - Sin `spaceId`: cada slot es `available` o `full` con `availableSpaces`/`reservedSpaces`.

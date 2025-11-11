@@ -15,7 +15,8 @@
     "db:reset": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",
     "swagger:check": "node ./src/config/swagger-build.js --check",
     "swagger:gen": "node ./src/config/swagger-build.js",
-    "email:smoke": "node src/scripts/email-smoke.js"
+    "email:smoke": "node src/scripts/email-smoke.js",
+    "reset-db": "node src/utils/resetDatabase.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

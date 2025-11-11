@@ -98,22 +98,34 @@ router.get("/available", authenticate, available);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, capacity]
+ *             required: [name, type, capacity]
  *             properties:
  *               name:
  *                 type: string
+ *                 example: "Laboratorio de Sistemas"
+ *               type:
+ *                 type: string
+ *                 enum: ["auditorium", "laboratory", "classroom", "systemsrooms", "other"]
+ *                 example: "laboratory"
  *               capacity:
  *                 type: integer
+ *                 example: 40
+ *           example:
+ *             name: "Laboratorio de Sistemas"
+ *             type: "laboratory"
+ *             capacity: 40
  *     responses:
  *       201:
  *         description: Espacio creado correctamente
  *       400:
- *         description: Datos inválidos
+ *         description: Datos inválidos (por ejemplo, falta name, type o capacity)
  *       401:
- *         description: No autorizado
+ *         description: No autorizado (token faltante o inválido)
  *       403:
- *         description: Prohibido
+ *         description: Prohibido (solo admin puede crear)
  */
+
+
 // Crear un nuevo espacio (solo para administradores)
 router.post("/", authenticate, authorize(["admin"]), create);
 
@@ -165,7 +177,7 @@ router.get("/:id", authenticate, get);
  *   put:
  *     tags: [Spaces]
  *     summary: Actualizar un espacio
- *     description: Solo administradores pueden modificar los datos de un espacio.
+ *     description: Solo administradores pueden modificar los datos de un espacio existente.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -181,18 +193,33 @@ router.get("/:id", authenticate, get);
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [name, type, capacity]
  *             properties:
  *               name:
  *                 type: string
+ *                 example: "Sala de Innovación"
+ *               type:
+ *                 type: string
+ *                 enum: ["auditorium", "laboratory", "classroom", "systemsrooms", "other"]
+ *                 example: "laboratory"
  *               capacity:
  *                 type: integer
+ *                 example: 40
+ *           example:
+ *             name: "Laboratorio de Innovación"
+ *             type: "laboratory"
+ *             capacity: 40
  *     responses:
  *       200:
  *         description: Espacio actualizado correctamente
  *       400:
- *         description: Datos inválidos
+ *         description: Datos inválidos o campo faltante
+ *       401:
+ *         description: No autorizado (token faltante o inválido)
  *       403:
- *         description: No autorizado
+ *         description: Prohibido (solo admin puede modificar)
+ *       404:
+ *         description: Espacio no encontrado
  */
 // Actualizar datos de un espacio (solo para administradores)
 router.put("/:id", authenticate, authorize(["admin"]), update);

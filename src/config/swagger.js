@@ -39,11 +39,14 @@ const swaggerDefinition = {
       Space: {
         type: 'object',
         properties: {
-          id: { type: 'integer' },
-          name: { type: 'string' },
-          capacity: { type: 'integer' }
-        }
+          id: { type: 'integer', example: 1 },
+          name: { type: 'string', example: 'Laboratorio de Redes' },
+          type: { type: 'string', example: 'Laboratorio' },
+          capacity: { type: 'integer', example: 25 }
+        },
+        required: ['name', 'type', 'capacity']
       },
+
       Reservation: {
         type: 'object',
         properties: {

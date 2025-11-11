@@ -104,7 +104,55 @@
             }
           }
         }
+      },
+      "Notification": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer", "example": 12 },
+        "user_id": { "type": "integer", "example": 5 },
+        "message": {
+          "type": "string",
+          "example": "Tu reserva ha sido cancelada."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "reservation_confirmed",
+            "reservation_canceled",
+            "reservation_modified",
+            "waitlist_promoted",
+            "reminder"
+          ],
+          "example": "reservation_canceled"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": true,
+          "example": {
+            "email": "ana@unicomfacauca.edu.co",
+            "subject": "Reserva cancelada",
+            "body": "Tu reserva fue cancelada correctamente.",
+            "status": "sent"
+          }
+        },
+        "is_read": { "type": "boolean", "example": false },
+        "sent_at": {
+          "type": "string",
+          "format": "date-time",
+          "example": "2025-11-11T00:12:00Z"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "example": "2025-11-11T00:10:00Z"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "example": "2025-11-11T00:10:30Z"
+        }
       }
+    }
     }
   },
   "security": [
@@ -756,6 +804,175 @@
           }
         }
       }
+    },
+    "/notifications": {
+  "get": {
+    "tags": ["Notifications"],
+    "summary": "Listar notificaciones del usuario autenticado",
+    "security": [{ "bearerAuth": [] }],
+    "responses": {
+      "200": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/components/schemas/Notification" }
+            }
+          }
+        }
+      },
+      "404": { "description": "No hay notificaciones disponibles" },
+      "401": { "description": "No autenticado" }
     }
+  }
+},
+"/notifications/{id}/read": {
+  "put": {
+    "tags": ["Notifications"],
+    "summary": "Marcar una notificación como leída",
+    "security": [{ "bearerAuth": [] }],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer" },
+        "description": "ID de la notificación a marcar"
+      }
+    ],
+    "responses": {
+      "200": { "description": "Notificación marcada como leída" },
+      "404": { "description": "Notificación no encontrada" }
+    }
+  }
+},
+"/notifications/all": {
+  "get": {
+    "tags": ["Notifications"],
+    "summary": "Listar todas las notificaciones (solo admin)",
+    "security": [{ "bearerAuth": [] }],
+    "responses": {
+      "200": {
+        "description": "Lista completa de notificaciones",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/components/schemas/Notification" }
+            }
+          }
+        }
+      },
+      "403": { "description": "Acceso no autorizado" }
+    }
+  }
+},
+"/notifications/{id}": {
+  "get": {
+    "tags": ["Notifications"],
+    "summary": "Obtener una notificación específica (admin o dueño)",
+    "security": [{ "bearerAuth": [] }],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer" },
+        "description": "ID de la notificación"
+      }
+    ],
+    "responses": {
+      "200": {
+        "description": "Notificación encontrada",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Notification" }
+          }
+        }
+      },
+      "404": { "description": "No encontrada" }
+    }
+  },
+  "delete": {
+    "tags": ["Notifications"],
+    "summary": "Eliminar una notificación (admin o dueño)",
+    "security": [{ "bearerAuth": [] }],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer" },
+        "description": "ID de la notificación"
+      }
+    ],
+    "responses": {
+      "200": { "description": "Notificación eliminada" },
+      "404": { "description": "No encontrada" }
+    }
+  }
+},
+"/notifications/test": {
+  "post": {
+    "tags": ["Notifications"],
+    "summary": "Enviar correo de prueba y registrar notificación",
+    "security": [{ "bearerAuth": [] }],
+    "requestBody": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "required": ["email", "subject", "body"],
+            "properties": {
+              "email": { "type": "string", "format": "email" },
+              "subject": { "type": "string" },
+              "body": { "type": "string" }
+            }
+          },
+          "examples": {
+            "ejemplo": {
+              "value": {
+                "email": "ana@unicomfacauca.edu.co",
+                "subject": "Reserva cancelada",
+                "body": "Tu reserva fue cancelada correctamente."
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "201": {
+        "description": "Correo enviado y notificación creada",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Notification" },
+            "examples": {
+              "ejemplo": {
+                "value": {
+                  "id": 16,
+                  "user_id": 7,
+                  "message": "Reserva cancelada",
+                  "type": "reservation_confirmed",
+                  "payload": {
+                    "email": "ana@unicomfacauca.edu.co",
+                    "subject": "Reserva cancelada",
+                    "body": "Tu reserva fue cancelada correctamente.",
+                    "status": "sent"
+                  },
+                  "is_read": false,
+                  "sent_at": "2025-11-11T00:15:00Z"
+                }
+              }
+            }
+          }
+        }
+      },
+      "400": { "description": "Error de validación" }
+    }
+  }
+}
   }
 }
