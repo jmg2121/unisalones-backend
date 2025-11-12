@@ -1,12 +1,29 @@
+// src/models/user.js
 module.exports = (sequelize, DataTypes) => {
-  const User = sequelize.define('User', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    name: { type: DataTypes.STRING, allowNull: false },
-    email: { type: DataTypes.STRING, allowNull: false, unique: true },
-    password_hash: { type: DataTypes.STRING, allowNull: false },
-    role: { type: DataTypes.ENUM('student', 'professor', 'admin'), defaultValue: 'student' },
-    failed_attempts: { type: DataTypes.INTEGER, defaultValue: 0 },
-    lock_until: { type: DataTypes.DATE, allowNull: true }
-  }, { tableName: 'users' });
+  const User = sequelize.define(
+    'User',
+    {
+      id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+      name: { type: DataTypes.STRING, allowNull: false },
+      email: { type: DataTypes.STRING, allowNull: false, unique: true },
+      password_hash: { type: DataTypes.STRING, allowNull: false },
+      role: {
+        type: DataTypes.ENUM('student', 'professor', 'admin'),
+        defaultValue: 'student',
+      },
+      failed_attempts: { type: DataTypes.INTEGER, defaultValue: 0 },
+      lock_until: { type: DataTypes.DATE, allowNull: true },
+    },
+    { tableName: 'users' }
+  );
+
+  //  Asociación necesaria para los reportes y reservas
+  User.associate = (models) => {
+    User.hasMany(models.Reservation, {
+      foreignKey: 'user_id',
+      as: 'reservations',
+    });
+  };
+
   return User;
 };
