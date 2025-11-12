@@ -9,19 +9,19 @@ const { sequelize } = require('./models');
 
 // Swagger (Sprint 2 – Bloque A)
 const swaggerUi = require('swagger-ui-express');
-const { swaggerSpec } = require('./config/swagger');
+const { swaggerSpec, swaggerCustomJs } = require('./config/swagger');
 
 const app = express();
 
 // ==========================================================
-// Seguridad OWASP (Bloque D – Isabella)
+// Seguridad OWASP (Bloque D)
 // ==========================================================
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' }, // permite Swagger y Mailtrap
   })
 );
-app.use(corsConfig());
+app.use(corsConfig);
 
 // Limitadores de peticiones
 if (process.env.NODE_ENV !== 'test') {
@@ -39,13 +39,84 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // ==========================================================
-// Documentación Swagger
+//  Servir script externo para el botón "Copiar token"
 // ==========================================================
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+app.get('/swagger-custom.js', (req, res) => {
+  res.type('application/javascript').send(`
+    window.addEventListener('load', function() {
+      const observer = new MutationObserver(() => {
+        document.querySelectorAll('pre code').forEach((block) => {
+          if (block.innerText.includes('"token"') && !block.parentElement.querySelector('.copy-btn')) {
+            const button = document.createElement('button');
+            button.textContent = '📋 Copiar token';
+            button.className = 'copy-btn';
+            button.style = \`
+              position: absolute;
+              top: 5px;
+              right: 5px;
+              background-color: #007bff;
+              color: white;
+              border: none;
+              border-radius: 6px;
+              padding: 6px 10px;
+              cursor: pointer;
+              font-size: 12px;
+              z-index: 10;
+            \`;
+
+            button.addEventListener('click', () => {
+              const match = block.innerText.match(/"token"\\s*:\\s*"([^"]+)"/);
+              if (match && match[1]) {
+                navigator.clipboard.writeText(match[1]);
+                button.textContent = '✅ Copiado';
+                button.style.backgroundColor = '#28a745';
+                setTimeout(() => {
+                  button.textContent = '📋 Copiar Token';
+                  button.style.backgroundColor = '#007bff';
+                }, 1500);
+              }
+            });
+
+            const wrapper = block.parentElement;
+            wrapper.style.position = 'relative';
+            wrapper.appendChild(button);
+          }
+        });
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  `);
+});
+
+
+// ==========================================================
+// Documentación Swagger (con botón "Copiar token")
+// ==========================================================
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    customJs: '/swagger-custom.js',
+    customCss: `
+      .copy-btn:hover {
+        opacity: 0.9;
+      }
+      .swagger-ui .topbar { background-color: #003366 !important; }
+      .swagger-ui .info h2, .swagger-ui .info p { color: #222 !important; }
+    `
+  })
+);
 
 // ==========================================================
 // Rutas principales
 // ==========================================================
+
+//  Bloque H – HU-006 (Reportes de uso)
+const reportRoutes = require('./routes/report.routes');
+app.use('/api/reports', reportRoutes); //  Endpoint /api/reports/usage habilitado
+
+// Resto de rutas globales
 app.use('/api', routes);
 
 // ==========================================================
@@ -87,9 +158,9 @@ const ready = initDatabase();
 async function closeDatabase() {
   try {
     await sequelize.close();
-    console.log('🧹 Conexión a la base de datos cerrada correctamente.');
+    console.log(' Conexión a la base de datos cerrada correctamente.');
   } catch (err) {
-    console.error('💥 Error cerrando la base de datos:', err);
+    console.error(' Error cerrando la base de datos:', err);
   }
 }
 
@@ -117,4 +188,3 @@ if (require.main === module) {
 module.exports = app;
 module.exports.ready = ready;
 module.exports.closeDatabase = closeDatabase;
-
