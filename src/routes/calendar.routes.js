@@ -1,8 +1,9 @@
 // src/routes/calendar.routes.js
 const express = require('express');
 const router = express.Router();
+
 const { getCalendar } = require('../controllers/calendar.controller');
-// Si quieres proteger con JWT: const { authenticate } = require('../middlewares/auth');
+const { authenticate } = require('../middlewares/auth');
 
 /**
  * @swagger
@@ -16,7 +17,7 @@ const { getCalendar } = require('../controllers/calendar.controller');
  * /calendar:
  *   get:
  *     tags: [Calendar]
- *     summary: Calendario de disponibilidad diaria o semanal (UH:233)
+ *     summary: Calendario de disponibilidad diaria o semanal // HU-008 — Visualización de horarios (ESTUDIANTE/PROFESOR)
  *     description: |
  *       - Con `spaceId`: cada slot es `available` o `reserved` (+ `reservationId`).  
  *       - Sin `spaceId`: cada slot es `available` o `full` con `availableSpaces`/`reservedSpaces`.
@@ -38,40 +39,11 @@ const { getCalendar } = require('../controllers/calendar.controller');
  *     responses:
  *       200:
  *         description: OK
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 date: { type: string, format: date }
- *                 range: { type: string, enum: [day, week] }
- *                 days:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       day: { type: string, format: date }
- *                       slots:
- *                         type: array
- *                         items:
- *                           type: object
- *                           properties:
- *                             start: { type: string, example: "08:00" }
- *                             end:   { type: string, example: "09:00" }
- *                             status:
- *                               type: string
- *                               description: >
- *                                 Con `spaceId`: available|reserved.
- *                                 Sin `spaceId`: available|full.
- *                               example: available
- *                               reservationId: { type: integer, nullable: true }
- *                             availableSpaces: { type: integer, nullable: true }
- *                             reservedSpaces: { type: integer, nullable: true }
  *       400:
  *         description: Parámetros inválidos
  *       404:
  *         description: Espacio no encontrado o inactivo
  */
-router.get('/', /* authenticate, */ getCalendar);
+router.get('/', authenticate, getCalendar);
 
 module.exports = router;

@@ -1,3 +1,10 @@
+
+/* HU verificadas:
+ HU-005 – Administración de espacios */
+
+
+
+ 
 jest.setTimeout(15000); // Aumenta el tiempo máximo a 15 segundos
 
 const svc = require("../../src/services/space.service");

@@ -1,26 +1,36 @@
+// ============================================
+//  Importaciones
+// ============================================
 const { Reservation, WaitlistEntry, Space, User } = require('../models');
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 const {
   sendReservationConfirmation,
   sendReservationCancellation,
+  sendWaitlistNotification, // <-- la agregamos aquí
 } = require('./notificationService');
+
+// ============================================
+// TRABAJO 100% EN UTC
+// (El controller ya normaliza a UTC)
+// ============================================
 
 /* =========================================================
     Verifica si hay traslape de horarios
    ========================================================= */
-async function hasOverlap(spaceId, start, end, excludeId = null) {
+async function hasOverlap(spaceId, startUTC, endUTC, excludeId = null) {
   const whereClause = {
     space_id: spaceId,
     status: 'confirmed',
     [Op.and]: [
-      { start_time: { [Op.lt]: end } },
-      { end_time: { [Op.gt]: start } },
+      { start_time: { [Op.lt]: endUTC } },
+      { end_time: { [Op.gt]: startUTC } },
     ],
   };
 
-  // Evitar conflicto consigo mismo (en caso de edición)
-  if (excludeId) whereClause.id = { [Op.ne]: excludeId };
+  if (excludeId) {
+    whereClause.id = { [Op.ne]: excludeId };
+  }
 
   const count = await Reservation.count({ where: whereClause });
   return count > 0;
@@ -30,6 +40,10 @@ async function hasOverlap(spaceId, start, end, excludeId = null) {
     Crear una nueva reserva
    ========================================================= */
 async function createReservation({ spaceId, userId, start, end }) {
+  // start y end YA VIENEN COMO Date UTC desde el controller
+  const startUTC = start;
+  const endUTC = end;
+
   const space = await Space.findByPk(spaceId);
   if (!space || !space.is_active) {
     const error = new Error('Espacio no disponible o inactivo');
@@ -37,7 +51,8 @@ async function createReservation({ spaceId, userId, start, end }) {
     throw error;
   }
 
-  const overlap = await hasOverlap(spaceId, start, end);
+  // Validar solapamiento
+  const overlap = await hasOverlap(spaceId, startUTC, endUTC);
   if (overlap) {
     const error = new Error('El horario solicitado ya está reservado');
     error.status = 409;
@@ -49,13 +64,12 @@ async function createReservation({ spaceId, userId, start, end }) {
   const reservation = await Reservation.create({
     user_id: userId,
     space_id: spaceId,
-    start_time: start,
-    end_time: end,
+    start_time: startUTC,
+    end_time: endUTC,
     status: 'confirmed',
     receipt_code: receiptCode,
   });
 
-  // Enviar correo de confirmación
   const user = await User.findByPk(userId);
   if (user) {
     await sendReservationConfirmation(user, reservation);
@@ -68,45 +82,43 @@ async function createReservation({ spaceId, userId, start, end }) {
     Cancelar una reserva existente
    ========================================================= */
 async function cancelReservation({ reservationId, userId, isAdmin }) {
-  console.log(`Intentando cancelar reserva ID: ${reservationId} — userId: ${userId} — isAdmin: ${isAdmin}`);
+  console.log(
+    `Intentando cancelar reserva ID: ${reservationId} — userId: ${userId} — isAdmin: ${isAdmin}`
+  );
 
   const reservation = await Reservation.findByPk(reservationId);
 
-  // No existe
   if (!reservation) {
     const error = new Error('Reserva no encontrada');
     error.status = 404;
     throw error;
   }
 
-  // Verificación del usuario
   if (!userId) {
     const error = new Error('Usuario no autenticado');
     error.status = 401;
     throw error;
   }
 
-  // Permiso: solo el creador o el admin pueden cancelarla
   if (!(isAdmin || reservation.user_id === userId)) {
-    console.warn(` Cancelación denegada: Reserva pertenece a ${reservation.user_id}, usuario actual ${userId}`);
+    console.warn(
+      ` Cancelación denegada: Reserva pertenece a ${reservation.user_id}, usuario actual ${userId}`
+    );
     const error = new Error('No autorizado');
     error.status = 403;
     throw error;
   }
 
-  // Ya estaba cancelada
-  if (reservation.status === 'canceled') {
+  if (reservation.status === 'cancelled') {
     return {
       message: 'La reserva ya estaba cancelada.',
-      canceledId: reservation.id,
+      cancelledId: reservation.id,
     };
   }
 
-  // Cancelar
-  reservation.status = 'canceled';
+  reservation.status = 'cancelled';
   await reservation.save();
 
-  // Enviar correo al usuario
   try {
     const user = await User.findByPk(reservation.user_id);
     if (user) {
@@ -116,7 +128,7 @@ async function cancelReservation({ reservationId, userId, isAdmin }) {
     console.error('Error al enviar correo de cancelación:', err.message);
   }
 
-  // Promover siguiente en lista de espera
+  // Promover lista de espera
   try {
     const nextEntry = await WaitlistEntry.findOne({
       where: {
@@ -150,7 +162,7 @@ async function cancelReservation({ reservationId, userId, isAdmin }) {
 
   return {
     message: 'Reserva cancelada correctamente',
-    canceledId: reservation.id,
+    cancelledId: reservation.id,
   };
 }
 
@@ -172,15 +184,24 @@ async function modifyReservation({ reservationId, userId, isAdmin, newStart, new
     throw error;
   }
 
-  const overlap = await hasOverlap(reservation.space_id, newStart, newEnd, reservationId);
+  // newStart y newEnd YA VIENEN COMO Date UTC
+  const newStartUTC = newStart;
+  const newEndUTC = newEnd;
+
+  const overlap = await hasOverlap(
+    reservation.space_id,
+    newStartUTC,
+    newEndUTC,
+    reservationId
+  );
   if (overlap) {
     const error = new Error('Horario no disponible');
     error.status = 409;
     throw error;
   }
 
-  reservation.start_time = newStart;
-  reservation.end_time = newEnd;
+  reservation.start_time = newStartUTC;
+  reservation.end_time = newEndUTC;
   await reservation.save();
 
   const user = await User.findByPk(reservation.user_id);
@@ -195,32 +216,68 @@ async function modifyReservation({ reservationId, userId, isAdmin, newStart, new
 }
 
 /* =========================================================
-    Unirse a la lista de espera
+    Unirse a la lista de espera — UTC ya viene del controller
    ========================================================= */
 async function joinWaitlist({ spaceId, userId, start, end }) {
-  const position = (await WaitlistEntry.count({
-    where: {
-      space_id: spaceId,
-      start_time: start,
-      end_time: end,
-      status: 'pending',
-    },
-  })) + 1;
+  const startUTC = start;  
+  const endUTC = end;
 
+  // 🚫 Verificar si ESTE usuario ya está inscrito en este rango
+  const existing = await WaitlistEntry.findOne({
+    where: {
+      user_id: userId,
+      space_id: spaceId,
+      start_time: startUTC,
+      end_time: endUTC,
+      status: "pending"
+    }
+  });
+
+  if (existing) {
+    return {
+      message: "Ya estás en la lista de espera para este horario.",
+      entry: existing,
+    };
+  }
+
+  // Calcular posición
+  const position =
+    (await WaitlistEntry.count({
+      where: {
+        space_id: spaceId,
+        start_time: startUTC,
+        end_time: endUTC,
+        status: "pending",
+      },
+    })) + 1;
+
+  // Crear nueva entrada
   const entry = await WaitlistEntry.create({
     space_id: spaceId,
     user_id: userId,
-    start_time: start,
-    end_time: end,
-    status: 'pending',
+    start_time: startUTC,
+    end_time: endUTC,
+    status: "pending",
     position,
   });
 
+  // Notificación (correo + registro)
+  try {
+    const user = await User.findByPk(userId);
+    const space = await Space.findByPk(spaceId);
+    if (user) {
+      await sendWaitlistNotification(user, entry, space);
+    }
+  } catch (err) {
+    console.error("Error al enviar notificación de lista de espera:", err.message);
+  }
+
   return {
-    message: 'Usuario añadido a la lista de espera',
+    message: "Usuario añadido a la lista de espera",
     entry,
   };
 }
+
 
 /* =========================================================
     Exportación

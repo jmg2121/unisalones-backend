@@ -1,10 +1,26 @@
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
 const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
 dayjs.extend(isSameOrBefore);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const { Space, Reservation } = require('../models');
 const { overlaps } = require('../utils/availability');
+
+const APP_TZ = 'America/Bogota';
+
+/**
+ * Convierte una fecha local (COL) a UTC para el backend/BD
+ * Ej: colToUTC("2025-11-20", "08:00") 
+ *     → UTC correcto para MySQL
+ */
+function colToUTC(date, hour) {
+  return dayjs.tz(`${date} ${hour}`, APP_TZ).utc().toDate();
+}
 
 // =======================
 // Crear espacio
@@ -61,7 +77,7 @@ async function updateSpace(id, data) {
 // =======================
 async function deleteSpace(id) {
   const space = await getSpace(id);
-  const now = dayjs().toDate();
+  const now = dayjs().tz(APP_TZ).utc().toDate();
 
   const active = await Reservation.count({
     where: {
@@ -82,29 +98,26 @@ async function deleteSpace(id) {
 // =======================
 // Buscar disponibilidad
 // =======================
-// =======================
-// Buscar disponibilidad
-// =======================
 async function searchAvailable({ date, start, end, type }) {
-  
 
-  // Normalizamos siempre como ISO
-  const startTime = new Date(`${date}T${start}:00.000Z`);
-  const endTime   = new Date(`${date}T${end}:00.000Z`);
+  // Conversión CORRECTA a UTC — SIN Z y respetando hora COL:
+  const startUTC = colToUTC(date, start);
+  const endUTC   = colToUTC(date, end);
 
   const spaces = await Space.findAll({
     where: { is_active: true, ...(type ? { type } : {}) }
   });
 
   const available = [];
+
   for (const space of spaces) {
     const overlapping = await Reservation.findOne({
       where: {
         space_id: space.id,
         status: 'confirmed',
         [Op.and]: [
-          { start_time: { [Op.lt]: endTime } },
-          { end_time: { [Op.gt]: startTime } }
+          { start_time: { [Op.lt]: endUTC } },
+          { end_time: { [Op.gt]: startUTC } }
         ]
       }
     });
@@ -116,8 +129,6 @@ async function searchAvailable({ date, start, end, type }) {
 
   return available;
 }
-
-
 
 // =======================
 // Exportar todo

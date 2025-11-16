@@ -13,7 +13,7 @@ const router = Router();
  *   get:
  *     tags:
  *       - Reports
- *     summary: Reporte de uso de espacios (HU-006)
+ *     summary: Reporte de uso de espacios // HU-006 — Reportes de uso de espacios (ADMIN)
  *     description: >
  *       Genera un reporte de uso de los espacios en un rango de fechas determinado.
  *       Soporta los formatos:

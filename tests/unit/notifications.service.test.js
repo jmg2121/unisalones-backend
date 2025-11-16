@@ -1,3 +1,9 @@
+
+/* HU verificadas:
+ HU-004 – Notificaciones */
+
+
+
 // NUEVO EN SPRINT 2 – BLOQUE B
 jest.mock('nodemailer', () => ({
   createTransport: jest.fn(() => ({

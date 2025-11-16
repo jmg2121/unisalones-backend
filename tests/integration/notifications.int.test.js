@@ -1,87 +1,139 @@
-//  SPRINT 2 – BLOQUE D (Corregido para Bloque D)
+// tests/integration/notifications.int.test.js
+
+
+/* HU verificada:
+ HU-004 – Notificaciones de reservas */
+
+
 const request = require('supertest');
+const dayjs = require('dayjs'); 
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'dev';
+
 const app = require('../../src/app');
-const { sequelize, User, Notification } = require('../../src/models');
+const { sequelize, User, Reservation, Space, Notification } = require('../../src/models');
 
-describe('HU-004 Notificaciones (integración)', () => {
-  let tokenAdmin, tokenStudent, spaceId, reservationId;
+dayjs.extend(utc);
+dayjs.extend(timezone);
+const TZ = 'America/Bogota';
 
-  beforeAll(async () => {
-    if (app.ready) await app.ready;
-    await sequelize.sync({ force: true });
+const STRONG_PASSWORD = 'Secret123!';
+const secret = process.env.JWT_SECRET;
 
-    // Crear usuarios base
-    const admin = await User.create({
-      name: 'Admin Test',
-      email: 'admin@unicomfacauca.edu.co',
-      password_hash: 'hash',
-      role: 'admin'
-    });
+async function createUserWithToken({ name, email, role }) {
+  const password_hash = await bcrypt.hash(STRONG_PASSWORD, 10);
 
-    const student = await User.create({
-      name: 'Student Test',
-      email: 'student@unicomfacauca.edu.co',
-      password_hash: 'hash',
-      role: 'student'
-    });
-
-    // Generar tokens JWT válidos
-    const secret = process.env.JWT_SECRET || 'clave_super_secreta';
-    tokenAdmin = jwt.sign({ id: admin.id, role: 'admin' }, secret, { expiresIn: '1h' });
-    tokenStudent = jwt.sign({ id: student.id, role: 'student' }, secret, { expiresIn: '1h' });
-
-    // Crear un espacio usando token de admin
-    const createSpace = await request(app)
-      .post('/api/spaces')
-      .set('Authorization', `Bearer ${tokenAdmin}`)
-      .send({
-        name: 'B-Lab',
-        type: 'laboratory',
-        capacity: 20
-      });
-
-    spaceId = createSpace.body.space?.id || createSpace.body.id;
+  const user = await User.create({
+    name,
+    email,
+    password_hash,
+    role,
   });
 
-  // 🧪 Prueba 1: Crear reserva genera notificación
-  test('crear reserva dispara notificación en DB', async () => {
+  const token = jwt.sign(
+    { id: user.id, role: user.role, email: user.email },
+    secret,
+    { expiresIn: '1h' }
+  );
+
+  return { user, token };
+}
+
+describe('HU-004 Notificaciones (integración)', () => {
+  let student;
+  let tokenStudent;
+  let space;
+
+  beforeAll(async () => {
+    await sequelize.sync({ force: true });
+
+    ({ user: student, token: tokenStudent } = await createUserWithToken({
+      name: 'Student Notifications',
+      email: 'studentnotif@unicomfacauca.edu.co',
+      role: 'student',
+    }));
+
+    space = await Space.create({
+      name: 'Sala Notif 1',
+      type: 'classroom',
+      capacity: 20,
+    });
+  });
+
+  afterAll(async () => {
+    await sequelize.close();
+  });
+
+  beforeEach(async () => {
+    await Notification.destroy({ where: {} });
+    await Reservation.destroy({ where: {} });
+  });
+
+  test('crear reserva genera notificación', async () => {
+    const date = '2025-11-10';
+    const start = dayjs.tz(`${date}T08:00`, TZ).utc().toDate();
+    const end = dayjs.tz(`${date}T09:00`, TZ).utc().toDate();
+
     const res = await request(app)
       .post('/api/reservations')
       .set('Authorization', `Bearer ${tokenStudent}`)
       .send({
-        spaceId,
-        startTime: '2025-11-10T10:00:00.000Z',
-        endTime: '2025-11-10T11:00:00.000Z'
+        spaceId: space.id,
+        start: start,       // ✔ CAMBIO CORRECTO
+        end: end,           // ✔ CAMBIO CORRECTO
       });
 
+    console.log("DEBUG CREATE RESERVATION RESPONSE:", res.status, res.body);
+
     expect(res.status).toBe(201);
-    reservationId = res.body.id;
+    const reservationId = res.body.id;
+    expect(reservationId).toBeDefined();
 
     await new Promise(r => setTimeout(r, 100));
 
     const notif = await Notification.findOne({ order: [['id', 'DESC']] });
-    expect(notif).toBeTruthy();
-    expect(notif.message).toContain('Reserva confirmada');
+    expect(notif).not.toBeNull();
+    expect(notif.type).toBe('reservation_confirmed');
+    expect(notif.user_id).toBe(student.id);
   });
 
-  // 🧪 Prueba 2: Cancelar reserva genera notificación
-  test('cancelar reserva dispara notificación en DB', async () => {
+  test('cancelar reserva genera notificación', async () => {
+    const date = '2025-11-10';
+    const start = dayjs.tz(`${date}T10:00`, TZ).utc().toDate();
+    const end = dayjs.tz(`${date}T11:00`, TZ).utc().toDate();
+
+    const created = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${tokenStudent}`)
+      .send({
+        spaceId: space.id,
+        start: start,       // ✔ CAMBIO CORRECTO
+        end: end,           // ✔ CAMBIO CORRECTO
+      });
+
+    console.log("DEBUG CANCEL-FLOW CREATE RESPONSE:", created.status, created.body);
+
+    expect(created.status).toBe(201);
+    const id = created.body.id;
+
     const res = await request(app)
-      .delete(`/api/reservations/${reservationId}`)
+      .delete(`/api/reservations/${id}`)
       .set('Authorization', `Bearer ${tokenStudent}`);
+
+    console.log("DEBUG DELETE RESERVATION RESPONSE:", res.status, res.body);
 
     expect(res.status).toBe(200);
 
     await new Promise(r => setTimeout(r, 100));
 
     const notif = await Notification.findOne({ order: [['id', 'DESC']] });
-    expect(notif).toBeTruthy();
-    expect(notif.message).toContain('Reserva cancelada');
-  });
-
-  afterAll(async () => {
-    await sequelize.close();
+    expect(notif).not.toBeNull();
+    expect(notif.type).toBe('reservation_canceled');
+    expect(notif.user_id).toBe(student.id);
   });
 });
-

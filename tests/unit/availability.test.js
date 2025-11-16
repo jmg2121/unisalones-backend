@@ -1,3 +1,8 @@
+/* HU verificadas:
+ HU-002 – Reserva de espacio
+ HU-008 – Visualización de horarios */
+
+
 const { overlaps } = require('../../src/utils/availability');
 
 describe('overlaps()', () => {

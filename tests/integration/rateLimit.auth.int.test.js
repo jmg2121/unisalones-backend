@@ -1,3 +1,10 @@
+
+/* HU verificada:
+HU-007 – Validación de identidad (seguridad API)
+Complementa seguridad de login. */
+
+
+
 const request = require('supertest');
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'testsecret';

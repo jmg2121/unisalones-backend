@@ -24,7 +24,4 @@ module.exports = {
     '/dist/',
     '/coverage/'
   ],
-
-  //  Ejecuta configuración adicional antes de cada test
-  setupFilesAfterEnv: ['<rootDir>/tests/setupTests.js']
 };

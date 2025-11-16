@@ -1,11 +1,21 @@
 // src/services/report.service.js
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
-const { Reservation, Space, User } = require('../models'); // Ajusta ruta si difiere
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
+const { Reservation, Space, User } = require('../models');
+
+const APP_TZ = process.env.APP_TZ || 'America/Bogota';
+
+// =============================================
+// Convertir rangos YYYY-MM-DD a UTC real
+// =============================================
 function toDateRangeInclusive(startDate, endDate) {
-  const start = dayjs(startDate).startOf('day').toDate();
-  const end = dayjs(endDate).endOf('day').toDate();
+  const start = dayjs.tz(`${startDate} 00:00:00`, APP_TZ).utc().toDate();
+  const end   = dayjs.tz(`${endDate} 23:59:59`, APP_TZ).utc().toDate();
   return { start, end };
 }
 
@@ -14,12 +24,18 @@ function diffHours(a, b) {
   return Math.max(ms / (1000 * 60 * 60), 0);
 }
 
+// =============================================
+// Fetch de reservas (con TZ correcta)
+// =============================================
 async function fetchReservations({ startDate, endDate, spaceId }) {
   const { start, end } = toDateRangeInclusive(startDate, endDate);
 
   const where = {
-    start_time: { [Op.gte]: start },
-    end_time: { [Op.lte]: end },
+    status: 'confirmed',
+    [Op.and]: [
+      { start_time: { [Op.lt]: end } },
+      { end_time:   { [Op.gt]: start } }
+    ]
   };
   if (spaceId) where.space_id = spaceId;
 
@@ -27,18 +43,22 @@ async function fetchReservations({ startDate, endDate, spaceId }) {
     where,
     include: [
       { model: Space, as: 'space', attributes: ['id', 'name', 'type', 'is_active'] },
-      { model: User, as: 'user', attributes: ['id', 'name', 'email'] },
+      { model: User,  as: 'user',  attributes: ['id', 'name', 'email'] },
     ],
     order: [['start_time', 'ASC']],
   });
 }
 
+// =============================================
+// Agregación por día (día en Colombia)
+// =============================================
 function aggregateUsage(reservations) {
-  // Estructura: { [day]: { [spaceId]: { spaceName, reservationsCount, totalHours, statusBreakdown } } }
   const byDay = {};
 
   for (const r of reservations) {
-    const day = dayjs(r.start_time).format('YYYY-MM-DD');
+    // Convertir r.start_time (UTC) a día colombiano
+    const day = dayjs.utc(r.start_time).tz(APP_TZ).format('YYYY-MM-DD');
+
     const sid = r.space_id;
     const sname = r.space?.name || `Space ${sid}`;
     const hours = diffHours(r.start_time, r.end_time);
@@ -54,13 +74,16 @@ function aggregateUsage(reservations) {
         statusBreakdown: {},
       };
     }
+
     byDay[day][sid].reservationsCount += 1;
     byDay[day][sid].totalHours += hours;
-    byDay[day][sid].statusBreakdown[status] = (byDay[day][sid].statusBreakdown[status] || 0) + 1;
+    byDay[day][sid].statusBreakdown[status] =
+      (byDay[day][sid].statusBreakdown[status] || 0) + 1;
   }
 
-  // Armar arreglo final por día
+  // Convertir estructura interna a respuesta final
   const days = Object.keys(byDay).sort();
+
   const result = days.map((d) => {
     const spaces = Object.values(byDay[d]).map((row) => ({
       spaceId: row.spaceId,

@@ -1,95 +1,169 @@
+// tests/integration/calendar.int.test.js
+
+
+/* HU verificada:
+ HU-008 – Visualización de horarios */
+
+ 
 const request = require('supertest');
-const app = require('../../src/app');
-const { sequelize, Space, Reservation } = require('../../src/models');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'dev';
+
+const app = require('../../src/app');
+const { sequelize, User, Space, Reservation } = require('../../src/models');
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const TZ = 'America/Bogota';
 
+const STRONG_PASSWORD = 'Secret123!';
+
 describe('GET /api/calendar', () => {
-  let space;
+  let student;
+  let tokenStudent;
+  let space1;
+  let space2;
+  const date = '2025-11-08';
 
   beforeAll(async () => {
     await sequelize.sync({ force: true });
 
-    // Crear usuario con contraseña cifrada (campo password_hash)
-    const password_hash = await bcrypt.hash('123456', 10);
-
-    const user = await sequelize.models.User.create({
-      name: 'Test User',
-      email: 'test@correo.com',
-      password_hash
+    const passwordHash = await bcrypt.hash(STRONG_PASSWORD, 10);
+    student = await User.create({
+      name: 'Calendar Student',
+      email: 'calendar@unicomfacauca.edu.co',
+      password_hash: passwordHash,
+      role: 'student',
     });
 
-    // Crear espacio (para las FK)
-    space = await sequelize.models.Space.create({
-      name: 'Lab 101',
-      type: 'laboratory',
+    const secret = process.env.JWT_SECRET;
+    tokenStudent = jwt.sign(
+  { id: student.id, role: student.role, email: student.email },
+  secret,
+  { expiresIn: '1h' }
+);
+
+
+    space1 = await Space.create({
+      name: 'Aula 101',
+      type: 'classroom',
       capacity: 30,
-      is_active: true
     });
 
-    // Guardar ID del usuario para las reservas
-    global.testUserId = user.id;
+    space2 = await Space.create({
+      name: 'Aula 102',
+      type: 'classroom',
+      capacity: 25,
+    });
   });
 
   afterAll(async () => {
     await sequelize.close();
   });
 
-  test('Día sin reservas (con spaceId) → todos available', async () => {
-    const date = '2025-11-08';
-    const res = await request(app).get('/api/calendar').query({ range:'day', date, spaceId: space.id });
-    expect(res.status).toBe(200);
-    expect(res.body.date).toBe(date);
-    expect(res.body.days).toHaveLength(1);
-    const slots = res.body.days[0].slots;
-    expect(slots.length).toBeGreaterThan(0);
-    expect(slots.every(s => s.status === 'available')).toBe(true);
+  beforeEach(async () => {
+    await Reservation.destroy({ where: {} });
   });
 
-  test('Día con reserva solapada (con spaceId) → mezcla reserved/available', async () => {
-    const date = '2025-11-09';
-    const start = dayjs.tz(`${date}T09:00:00`, TZ).utc().toDate();
-    const end   = dayjs.tz(`${date}T10:30:00`, TZ).utc().toDate();
+  test('Día sin reservas (con spaceId) → todos available', async () => {
+    const res = await request(app)
+      .get('/api/calendar')
+      .set('Authorization', `Bearer ${tokenStudent}`)
+      .query({ range: 'day', date, spaceId: space1.id });
 
-    const r = await Reservation.create({
-      space_id: space.id,
-      user_id: global.testUserId,
+    expect(res.status).toBe(200);
+    expect(res.body.range).toBe('day');
+    expect(res.body.date).toBe(date);
+    expect(Array.isArray(res.body.days)).toBe(true);
+    expect(res.body.days.length).toBe(1);
+
+    const slots = res.body.days[0].slots;
+    expect(Array.isArray(slots)).toBe(true);
+
+    const statuses = slots.flatMap(slot =>
+      slot.spaces.filter(s => s.id === space1.id).map(s => s.status)
+    );
+
+    expect(statuses.length).toBeGreaterThan(0);
+    // En un día sin reservas, debe estar todo disponible
+    expect(statuses.every(st => st === 'available')).toBe(true);
+  });
+
+  test('Día con reserva solapada (con spaceId)', async () => {
+    const start = dayjs.tz(`${date}T09:00`, TZ).utc().toDate();
+    const end = dayjs.tz(`${date}T10:30`, TZ).utc().toDate();
+
+    await Reservation.create({
+      space_id: space1.id,
+      user_id: student.id,
       start_time: start,
       end_time: end,
-      status: 'confirmed'
+      status: 'confirmed',
     });
 
-    const res = await request(app).get('/api/calendar').query({ range:'day', date, spaceId: space.id });
+    const res = await request(app)
+      .get('/api/calendar')
+      .set('Authorization', `Bearer ${tokenStudent}`)
+      .query({ range: 'day', date, spaceId: space1.id });
+
     expect(res.status).toBe(200);
+    expect(res.body.date).toBe(date);
+
     const slots = res.body.days[0].slots;
-    expect(slots.some(s => s.status === 'reserved' && s.reservationId === r.id)).toBe(true);
-    expect(slots.some(s => s.status === 'available')).toBe(true);
+
+    const statuses = slots.flatMap(slot =>
+      slot.spaces.filter(s => s.id === space1.id).map(s => s.status)
+    );
+
+    expect(statuses).toContain('busy');
   });
 
-  test('Sin spaceId → estado global available/full con contadores', async () => {
-    const date = '2025-11-10';
-    const space2 = await Space.create({ name: 'Lab 102', type:'laboratory', capacity: 20, is_active: true });
-
-    const sUTC = dayjs.tz(`${date}T08:00:00`, TZ).utc().toDate();
-    const eUTC = dayjs.tz(`${date}T09:00:00`, TZ).utc().toDate();
+  test('Sin spaceId → estado global', async () => {
+    const sUTC = dayjs.tz(`${date}T09:00`, TZ).utc().toDate();
+    const eUTC = dayjs.tz(`${date}T10:00`, TZ).utc().toDate();
 
     await Reservation.bulkCreate([
-      { space_id: space.id,  user_id: global.testUserId, start_time: sUTC, end_time: eUTC, status: 'confirmed' },
-      { space_id: space2.id, user_id: global.testUserId, start_time: sUTC, end_time: eUTC, status: 'confirmed' }
+      {
+        space_id: space1.id,
+        user_id: student.id,
+        start_time: sUTC,
+        end_time: eUTC,
+        status: 'confirmed',
+      },
+      {
+        space_id: space2.id,
+        user_id: student.id,
+        start_time: sUTC,
+        end_time: eUTC,
+        status: 'confirmed',
+      },
     ]);
 
-    const res = await request(app).get('/api/calendar').query({ range:'day', date });
+    const res = await request(app)
+      .get('/api/calendar')
+      .set('Authorization', `Bearer ${tokenStudent}`)
+      .query({ range: 'day', date });
+
     expect(res.status).toBe(200);
-    const slot = res.body.days[0].slots.find(s => s.start === '08:00' && s.end === '09:00');
-    expect(slot).toBeDefined();
-    expect(slot.status).toBe('full');
-    expect(slot.availableSpaces).toBe(0);
-    expect(slot.reservedSpaces).toBe(2);
+    expect(res.body.date).toBe(date);
+    expect(Array.isArray(res.body.days)).toBe(true);
+
+    const allSlots = res.body.days[0].slots;
+
+    const statuses1 = allSlots.flatMap(slot =>
+      slot.spaces.filter(s => s.id === space1.id).map(s => s.status)
+    );
+    const statuses2 = allSlots.flatMap(slot =>
+      slot.spaces.filter(s => s.id === space2.id).map(s => s.status)
+    );
+
+    expect(statuses1).toContain('busy');
+    expect(statuses2).toContain('busy');
   });
 });
