@@ -13,6 +13,35 @@ const {
 
 const router = express.Router();
 
+// ====== ZONA HORARIA: AMÉRICA/BOGOTÁ ======
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const APP_TZ = 'America/Bogota';
+
+// ===========================
+// Normalizar fechas (COL → UTC)
+// ===========================
+function normalizeDateFields(req, res, next) {
+  try {
+    const { start, end } = req.body;
+
+    if (start) {
+      req.body.startUTC = dayjs.tz(start, APP_TZ).utc().toDate();
+    }
+    if (end) {
+      req.body.endUTC = dayjs.tz(end, APP_TZ).utc().toDate();
+    }
+
+    next();
+  } catch (error) {
+    return res.status(400).json({ error: 'Formato de fecha inválido' });
+  }
+}
+
 /**
  * @swagger
  * tags:
@@ -25,7 +54,7 @@ const router = express.Router();
  * /reservations:
  *   post:
  *     tags: [Reservations]
- *     summary: Crear una nueva reserva
+ *     summary: Crear una nueva reserva // HU-002 — Reserva de espacio (ADMIN/ESTUDIANTE/PROFESOR)
  *     description: Permite al usuario autenticado crear una reserva de un espacio disponible.
  *     security:
  *       - bearerAuth: []
@@ -43,11 +72,11 @@ const router = express.Router();
  *               start:
  *                 type: string
  *                 format: date-time
- *                 example: "2025-11-12T08:00:00.000Z"
+ *                 example: "2025-11-12T08:00:00"
  *               end:
  *                 type: string
  *                 format: date-time
- *                 example: "2025-11-12T09:00:00.000Z"
+ *                 example: "2025-11-12T09:00:00"
  *     responses:
  *       '201':
  *         description: Reserva creada exitosamente
@@ -59,33 +88,24 @@ const router = express.Router();
  *                 id: 10
  *                 user_id: 5
  *                 space_id: 2
- *                 start_time: "2025-11-12T08:00:00.000Z"
- *                 end_time: "2025-11-12T09:00:00.000Z"
+ *                 start_time: "2025-11-12T08:00:00"
+ *                 end_time: "2025-11-12T09:00:00"
  *                 status: "confirmed"
  *       '400':
  *         description: Error en los datos enviados
- *         content:
- *           application/json:
- *             example:
- *               message: "Faltan campos requeridos: spaceId, start y end."
  *       '409':
- *         description: Conflicto de horario (ya ocupado)
- *         content:
- *           application/json:
- *             example:
- *               message: "El horario solicitado ya está reservado"
+ *         description: Conflicto de horario
  *       '401':
  *         description: Usuario no autenticado
  */
-router.post('/', authenticate, validateReservationCreate, create);
+router.post('/', authenticate, validateReservationCreate, normalizeDateFields, create);
 
 /**
  * @swagger
  * /reservations/{id}:
  *   patch:
  *     tags: [Reservations]
- *     summary: Modificar una reserva existente
- *     description: Permite al usuario autenticado actualizar su reserva (solo se pueden cambiar las horas de inicio y fin).
+ *     summary: Modificar una reserva existente // HU-003 — Cancelar o modificar reserva
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -94,7 +114,6 @@ router.post('/', authenticate, validateReservationCreate, create);
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID de la reserva a modificar
  *     requestBody:
  *       required: true
  *       content:
@@ -106,51 +125,29 @@ router.post('/', authenticate, validateReservationCreate, create);
  *               start:
  *                 type: string
  *                 format: date-time
- *                 example: "2025-11-13T10:00:00.000Z"
+ *                 example: "2025-11-13T10:00:00"
  *               end:
  *                 type: string
  *                 format: date-time
- *                 example: "2025-11-13T11:00:00.000Z"
+ *                 example: "2025-11-13T11:00:00"
  *     responses:
  *       '200':
- *         description: Reserva modificada correctamente
- *         content:
- *           application/json:
- *             example:
- *               message: "Reserva actualizada correctamente"
- *               updatedReservation:
- *                 id: 10
- *                 start_time: "2025-11-13T10:00:00.000Z"
- *                 end_time: "2025-11-13T11:00:00.000Z"
- *                 status: "confirmed"
+ *         description: Reserva actualizada correctamente
  *       '400':
  *         description: Validación fallida
- *         content:
- *           application/json:
- *             example:
- *               message: "Los campos start y end son obligatorios."
  *       '403':
- *         description: Usuario no autorizado para modificar esta reserva
- *         content:
- *           application/json:
- *             example:
- *               message: "No autorizado"
+ *         description: No autorizado
  *       '404':
  *         description: Reserva no encontrada
- *         content:
- *           application/json:
- *             example:
- *               message: "Reserva no encontrada"
  */
-router.patch('/:id', authenticate, modify);
+router.patch('/:id', authenticate, normalizeDateFields, modify);
 
 /**
  * @swagger
  * /reservations/{id}:
  *   delete:
  *     tags: [Reservations]
- *     summary: Cancelar una reserva existente
- *     description: Permite al usuario autenticado o a un administrador cancelar una reserva activa.
+ *     summary: Cancelar una reserva existente // HU-003 — Cancelar o modificar reserva
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -159,27 +156,13 @@ router.patch('/:id', authenticate, modify);
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID de la reserva a cancelar
  *     responses:
  *       '200':
- *         description: Reserva cancelada exitosamente
- *         content:
- *           application/json:
- *             example:
- *               message: "Reserva cancelada correctamente"
- *               canceledId: 10
+ *         description: Reserva cancelada correctamente
  *       '403':
  *         description: No autorizado
- *         content:
- *           application/json:
- *             example:
- *               message: "No autorizado"
  *       '404':
  *         description: Reserva no encontrada
- *         content:
- *           application/json:
- *             example:
- *               message: "Reserva no encontrada"
  */
 router.delete('/:id', authenticate, cancelCtrl);
 
@@ -188,27 +171,14 @@ router.delete('/:id', authenticate, cancelCtrl);
  * /reservations/me:
  *   get:
  *     tags: [Reservations]
- *     summary: Listar reservas del usuario autenticado
- *     description: Devuelve el historial de reservas del usuario que inició sesión.
+ *     summary: Listar reservas del usuario autenticado // HU-009 — Historial de reservas
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       '200':
- *         description: Historial de reservas encontrado
- *         content:
- *           application/json:
- *             example:
- *               - id: 1
- *                 space_id: 2
- *                 start_time: "2025-11-10T08:00:00.000Z"
- *                 end_time: "2025-11-10T09:00:00.000Z"
- *                 status: "confirmed"
+ *         description: Historial obtenido
  *       '404':
- *         description: Sin reservas en el historial
- *         content:
- *           application/json:
- *             example:
- *               message: "No se encontraron reservas en el historial."
+ *         description: No se encontraron reservas
  */
 router.get('/me', authenticate, myHistory);
 
@@ -218,7 +188,6 @@ router.get('/me', authenticate, myHistory);
  *   get:
  *     tags: [Reservations]
  *     summary: Listar todas las reservas del usuario autenticado
- *     description: Devuelve todas las reservas registradas por el usuario.
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -232,8 +201,7 @@ router.get('/', authenticate, getAllReservations);
  * /reservations/waitlist:
  *   post:
  *     tags: [Reservations]
- *     summary: Unirse a la lista de espera
- *     description: Permite al usuario autenticado unirse a la lista de espera de un espacio ocupado.
+ *     summary: Unirse a la lista de espera // HU-010 — Lista de espera
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -250,11 +218,11 @@ router.get('/', authenticate, getAllReservations);
  *               start:
  *                 type: string
  *                 format: date-time
- *                 example: "2025-11-14T14:00:00.000Z"
+ *                 example: "2025-11-14T14:00:00"
  *               end:
  *                 type: string
  *                 format: date-time
- *                 example: "2025-11-14T15:00:00.000Z"
+ *                 example: "2025-11-14T15:00:00"
  *     responses:
  *       '201':
  *         description: Usuario añadido a la lista de espera
@@ -269,7 +237,7 @@ router.get('/', authenticate, getAllReservations);
  *       '400':
  *         description: Datos faltantes o inválidos
  */
-router.post('/waitlist', authenticate, joinWaitlistCtrl);
+router.post('/waitlist', authenticate, normalizeDateFields, joinWaitlistCtrl);
 
 /**
  * @swagger
@@ -277,12 +245,11 @@ router.post('/waitlist', authenticate, joinWaitlistCtrl);
  *   get:
  *     tags: [Reservations]
  *     summary: Obtener lista de espera del usuario autenticado
- *     description: Devuelve las entradas de lista de espera asociadas al usuario autenticado.
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       '200':
- *         description: Lista de espera obtenida correctamente
+ *         description: Lista obtenida correctamente
  *       '404':
  *         description: No hay registros en la lista de espera
  */

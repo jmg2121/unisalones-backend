@@ -23,7 +23,7 @@ const router = express.Router();
  * /spaces/available:
  *   get:
  *     tags: [Spaces]
- *     summary: Consultar espacios disponibles
+ *     summary: Consultar espacios disponibles // HU-001 — Búsqueda de espacios (ADMIN/ESTUDIANTE/PROFESOR)
  *     description: Devuelve la disponibilidad de los espacios según los filtros de fecha u hora.
  *     security:
  *       - bearerAuth: []
@@ -88,7 +88,7 @@ router.get("/available", authenticate, available);
  * /spaces:
  *   post:
  *     tags: [Spaces]
- *     summary: Crear un nuevo espacio
+ *     summary: Crear un nuevo espacio // HU-005 — Administración de espacios (ADMIN)
  *     description: Solo los administradores pueden crear nuevos espacios.
  *     security:
  *       - bearerAuth: []
@@ -176,7 +176,7 @@ router.get("/:id", authenticate, get);
  * /spaces/{id}:
  *   put:
  *     tags: [Spaces]
- *     summary: Actualizar un espacio
+ *     summary: Actualizar un espacio // HU-005 — Administración de espacios (ADMIN)
  *     description: Solo administradores pueden modificar los datos de un espacio existente.
  *     security:
  *       - bearerAuth: []
@@ -229,7 +229,7 @@ router.put("/:id", authenticate, authorize(["admin"]), update);
  * /spaces/{id}:
  *   delete:
  *     tags: [Spaces]
- *     summary: Eliminar un espacio
+ *     summary: Eliminar un espacio // HU-005 — Administración de espacios (ADMIN)
  *     description: Solo administradores pueden eliminar espacios.
  *     security:
  *       - bearerAuth: []

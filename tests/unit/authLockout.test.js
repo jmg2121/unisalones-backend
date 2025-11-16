@@ -1,3 +1,14 @@
+/* HU verificadas:
+ HU-007 — Validación de identidad 
+ 
+ 
+ Esta HU exige que solo usuarios institucionales se registren o hagan login
+
+ */
+
+
+
+
 const { emailDomainOk } = require('../../src/services/auth.service');
 
 describe('Email institucional', () => {

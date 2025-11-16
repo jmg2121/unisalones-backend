@@ -1,6 +1,15 @@
 // src/controllers/report.controller.js
 const { validationResult } = require('express-validator');
 const dayjs = require('dayjs');
+
+// Plugins para manejar zona horaria
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const APP_TZ = process.env.APP_TZ || 'America/Bogota';
+
 const { fetchReservations, aggregateUsage } = require('../services/report.service');
 const { generatePDF, generateXLSX } = require('../utils/reportGenerator');
 
@@ -36,7 +45,8 @@ async function getUsageReport(req, res, next) {
           startDate,
           endDate,
           spaceId: spaceId ? Number(spaceId) : null,
-          generatedAt: dayjs().toISOString(),
+          // AHORA en hora de Colombia
+          generatedAt: dayjs().tz(APP_TZ).format(), // ej: 2025-11-16T21:30:00-05:00
         },
         data: aggregated,
       });
@@ -83,12 +93,12 @@ async function getUsageReport(req, res, next) {
       .status(400)
       .json({ error: 'Formato no soportado. Use format=json|pdf|xlsx' });
 
-    } catch (err) {
+  } catch (err) {
     // ============================================================
     // 5️ Manejo de errores detallado y forzado
     // ============================================================
     console.log('\n==============================');
-    console.log('❌ ERROR DETECTADO EN REPORTES');
+    console.log(' ERROR DETECTADO EN REPORTES');
     console.log('Mensaje:', err.message);
     console.log('Tipo:', err.name);
     console.log('Stack:\n', err.stack);
@@ -102,7 +112,6 @@ async function getUsageReport(req, res, next) {
       stack: err.stack?.split('\n').slice(0, 2).join(' '), // mostramos 2 primeras líneas del stack
     });
   }
-
 }
 
 module.exports = { getUsageReport };

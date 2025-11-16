@@ -10,11 +10,11 @@ const { body, validationResult } = require('express-validator');
 const { registerCtrl, loginCtrl } = require('../controllers/auth.controller');
 const router = express.Router();
 
-// Middleware reutilizable para manejar errores de validación
+// Middleware para manejar errores de validación
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ // 🔄 unificado con Bloque D
+    return res.status(400).json({
       message: 'Validación fallida',
       errors: errors.array(),
     });
@@ -26,8 +26,8 @@ const handleValidationErrors = (req, res, next) => {
  * @swagger
  * /auth/register:
  *   post:
- *     summary: Registro de un nuevo usuario
- *     description: Permite registrar un nuevo usuario como administrador o estudiante.
+ *     summary: Registro de un nuevo usuario // HU-007 — Validación de identidad (ESTUDIANTE/PROFESOR)
+ *     description: Registra un nuevo usuario. El rol permitido es únicamente **student** o **professor**.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -49,55 +49,52 @@ const handleValidationErrors = (req, res, next) => {
  *                 example: juan@unicomfacauca.edu.co
  *               password:
  *                 type: string
- *                 example: 123456
+ *                 example: Passw0rd!
  *               role:
  *                 type: string
- *                 enum: [admin, student]
+ *                 enum: [student, professor]
  *                 example: student
  *     responses:
  *       '201':
  *         description: Usuario creado exitosamente.
  *       '400':
  *         description: Validación fallida.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Validación fallida
- *                 errors:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       msg:
- *                         type: string
- *                         example: El nombre es obligatorio
- *                       param:
- *                         type: string
- *                         example: name
- *                       location:
- *                         type: string
- *                         example: body
- *       '422':
- *         description: Error de validación.
+ */
+
+/**
+ * REGISTRO
  */
 router.post(
   '/register',
   [
-    body('name').trim().notEmpty().withMessage('El nombre es obligatorio'),
+    body('name')
+      .trim()
+      .notEmpty()
+      .withMessage('El nombre es obligatorio'),
+
     body('email')
       .isEmail()
       .normalizeEmail()
       .withMessage('Debe ser un correo válido'),
+
+    // 🔒 VALIDACIÓN DE CONTRASEÑA FUERTE
     body('password')
-      .isLength({ min: 6 })
-      .withMessage('La contraseña debe tener al menos 6 caracteres'),
+      .isString()
+      .isLength({ min: 8 })
+      .withMessage('La contraseña debe tener mínimo 8 caracteres.')
+      .matches(/[A-Z]/)
+      .withMessage('Debe incluir al menos una letra mayúscula.')
+      .matches(/[a-z]/)
+      .withMessage('Debe incluir al menos una letra minúscula.')
+      .matches(/\d/)
+      .withMessage('Debe incluir al menos un número.')
+      .matches(/[!@#$%^&*(),.?":{}|<>]/)
+      .withMessage('Debe incluir al menos un símbolo.'),
+
     body('role')
-      .isIn(['admin', 'student'])
-      .withMessage('El rol debe ser admin o student'),
+      .isIn(['student', 'professor'])
+      .withMessage('El rol debe ser student o professor'),
+
     handleValidationErrors,
   ],
   registerCtrl
@@ -125,47 +122,16 @@ router.post(
  *                 example: juan@unicomfacauca.edu.co
  *               password:
  *                 type: string
- *                 example: 123456
+ *                 example: Passw0rd!
  *     responses:
  *       '200':
- *         description: Inicio de sesión exitoso, devuelve token JWT.
+ *         description: Inicio de sesión exitoso.
  *       '400':
- *         description: Credenciales inválidas o validación fallida.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Validación fallida
- *                 errors:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       msg:
- *                         type: string
- *                         example: La contraseña es obligatoria
- *                       param:
- *                         type: string
- *                         example: password
- *                       location:
- *                         type: string
- *                         example: body
+ *         description: Credenciales inválidas.
  *       '429':
- *         description: Demasiadas solicitudes
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Demasiadas solicitudes. Intenta más tarde."
- *       '422':
- *         description: Error de validación.
+ *         description: Demasiadas solicitudes.
  */
+
 router.post(
   '/login',
   [
@@ -173,10 +139,75 @@ router.post(
       .isEmail()
       .normalizeEmail()
       .withMessage('Debe ser un correo válido'),
-    body('password').notEmpty().withMessage('La contraseña es obligatoria'),
+
+    body('password')
+      .notEmpty()
+      .withMessage('La contraseña es obligatoria'),
+
     handleValidationErrors,
   ],
   loginCtrl
+);
+
+// IMPORTAR MIDDLEWARES
+const { authenticate } = require('../middlewares/auth');
+const isAdmin = require('../middlewares/isAdmin');
+
+// IMPORTAR SERVICIO
+const authService = require('../services/auth.service');
+
+// ======================================
+//  ENDPOINT INTERNO: CREAR ADMIN
+//  NO APARECE EN SWAGGER (intencional)
+// ======================================
+router.post(
+  '/create-admin',
+  authenticate,
+  isAdmin,
+  [
+    body('name').notEmpty().withMessage('El nombre es obligatorio'),
+    body('email').isEmail().withMessage('Debe ser un correo válido'),
+    body('password')
+      .isLength({ min: 8 })
+      .withMessage('La contraseña debe tener mínimo 8 caracteres.')
+      .matches(/[A-Z]/)
+      .withMessage('Debe incluir una mayúscula.')
+      .matches(/[a-z]/)
+      .withMessage('Debe incluir una minúscula.')
+      .matches(/\d/)
+      .withMessage('Debe incluir un número.')
+      .matches(/[!@#$%^&*(),.?":{}|<>]/)
+      .withMessage('Debe incluir un símbolo.'),
+    handleValidationErrors,
+  ],
+  async (req, res) => {
+    try {
+      const { name, email, password } = req.body;
+
+      const newAdmin = await authService.register({
+        name,
+        email,
+        password,
+        role: 'admin',
+      });
+
+      return res.status(201).json({
+        message: 'Administrador creado correctamente',
+        admin: {
+          id: newAdmin.id,
+          name: newAdmin.name,
+          email: newAdmin.email,
+          role: newAdmin.role,
+        },
+      });
+
+    } catch (e) {
+      if (e.name === 'SequelizeUniqueConstraintError') {
+        return res.status(409).json({ error: 'El correo ya está registrado' });
+      }
+      return res.status(400).json({ error: e.message || 'Error al crear administrador' });
+    }
+  }
 );
 
 module.exports = router;

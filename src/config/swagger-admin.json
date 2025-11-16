@@ -1,0 +1,71 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Unisalones - Documentación Privada (Solo Administradores)",
+    "version": "1.0.0",
+    "description": "Documentación interna y endpoints exclusivos para administradores del sistema. Solo usuarios con rol ADMIN pueden acceder."
+  },
+
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Servidor privado para administradores"
+    }
+  ],
+
+  "tags": [
+    {
+      "name": "Admin",
+      "description": "Endpoints internos y de alto privilegio"
+    }
+  ],
+
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+
+  "security": [
+    { "bearerAuth": [] }
+  ],
+
+  "paths": {
+    "/auth/create-admin": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Crear administrador",
+        "description": "Crea un nuevo usuario con rol ADMIN. Solo accesible para usuarios administradores autenticados.",
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Nuevo Admin" },
+                  "email": { "type": "string", "example": "nuevo@unicomfacauca.edu.co" },
+                  "password": { "type": "string", "example": "admin123" }
+                },
+                "required": ["name", "email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Administrador creado correctamente" },
+          "400": { "description": "Datos inválidos" },
+          "401": { "description": "Token inválido" },
+          "403": { "description": "No autorizado" }
+        }
+      }
+    }
+  }
+}

@@ -1,3 +1,10 @@
+
+
+/*HU verificada:
+ HU-006 – Reportes de uso*/
+
+
+
 // Forzar logs en Jest (muestra console.log/error en la salida del test)
 process.env.NODE_ENV = 'test';
 beforeAll(() => {

@@ -1,37 +1,51 @@
 const { transporter, FROM } = require('../config/email');
 const { Notification, Space } = require('../models');
-const { buildReservationMail, buildCancellationMail } = require('./templates/emailTemplates');
 
-/**
- * Guarda una notificación en la base de datos.
- */
+const {
+  buildReservationMail,
+  buildCancellationMail,
+  buildWaitlistMail
+} = require('./templates/emailTemplates');
+
+// ================================
+// Manejo de fechas en zona Colombia
+// ================================
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const APP_TZ = process.env.APP_TZ || 'America/Bogota';
+
+function formatColombia(date) {
+  if (!date) return '';
+  return dayjs(date).tz(APP_TZ).format('YYYY-MM-DD HH:mm');
+}
+
 async function recordNotification(userId, message, type, payload = {}) {
   return Notification.create({
     user_id: userId,
     message,
-    type, // valores esperados: reservation_confirmed, reservation_canceled, etc.
+    type,
     payload,
-    sent_at: new Date(),
-    is_read: false
+    sent_at: dayjs().tz(APP_TZ).toDate(),
+    is_read: false,
   });
 }
 
-/**
- * Busca un espacio de forma segura, incluso si no hay BD (para unit tests).
- */
 async function safeFindSpace(spaceId) {
   try {
     if (!spaceId) return null;
     return await Space.findByPk(spaceId);
   } catch {
-    // Evita que los tests unitarios fallen por falta de conexión SQLite
     return null;
   }
 }
 
-/**
- * Envía correo y registra notificación al confirmar reserva.
- */
+// ======================================================
+// CONFIRMACIÓN DE RESERVA
+// ======================================================
 async function sendReservationConfirmation(user, reservation) {
   const space = await safeFindSpace(reservation.space_id);
   const mail = buildReservationMail(user, reservation, space);
@@ -41,25 +55,29 @@ async function sendReservationConfirmation(user, reservation) {
     to: user.email,
     subject: mail.subject,
     html: mail.html,
-    text: mail.text
+    text: mail.text,
   });
+
+  const startCOL = formatColombia(reservation.start_time);
+  const endCOL = formatColombia(reservation.end_time);
 
   await recordNotification(
     user.id,
-    `Reserva confirmada: ${space?.name || 'Espacio'} (${reservation.start_time} → ${reservation.end_time})`,
-    'reservation_confirmed',
+    `Reserva confirmada en ${space?.name}: ${startCOL} → ${endCOL}`,
+    "reservation_confirmed",
     {
       reservationId: reservation.id,
-      space: space?.name || reservation.space_id,
-      start: reservation.start_time,
-      end: reservation.end_time
+      receipt_code: reservation.receipt_code,
+      space: space?.name,
+      start: startCOL,
+      end: endCOL,
     }
   );
 }
 
-/**
- * Envía correo y registra notificación al cancelar reserva.
- */
+// ======================================================
+// CANCELACIÓN DE RESERVA
+// ======================================================
 async function sendReservationCancellation(user, reservation) {
   const space = await safeFindSpace(reservation.space_id);
   const mail = buildCancellationMail(user, reservation, space);
@@ -69,23 +87,60 @@ async function sendReservationCancellation(user, reservation) {
     to: user.email,
     subject: mail.subject,
     html: mail.html,
-    text: mail.text
+    text: mail.text,
   });
+
+  const startCOL = formatColombia(reservation.start_time);
+  const endCOL = formatColombia(reservation.end_time);
 
   await recordNotification(
     user.id,
-    `Reserva cancelada: ${space?.name || 'Espacio'} (${reservation.start_time} → ${reservation.end_time})`,
-    'reservation_canceled',
+    `Reserva cancelada en ${space?.name}: ${startCOL} → ${endCOL}`,
+    "reservation_canceled",
     {
       reservationId: reservation.id,
-      space: space?.name || reservation.space_id,
-      start: reservation.start_time,
-      end: reservation.end_time
+      receipt_code: reservation.receipt_code,
+      space: space?.name,
+      start: startCOL,
+      end: endCOL,
+    }
+  );
+}
+
+// ======================================================
+// LISTA DE ESPERA
+// ======================================================
+async function sendWaitlistNotification(user, waitlistEntry) {
+  const space = await safeFindSpace(waitlistEntry.space_id);
+  const mail = buildWaitlistMail(user, waitlistEntry, space);
+
+  await transporter.sendMail({
+    from: FROM,
+    to: user.email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+  });
+
+  const startCOL = formatColombia(waitlistEntry.start_time);
+  const endCOL = formatColombia(waitlistEntry.end_time);
+
+  await recordNotification(
+    user.id,
+    `Añadido a lista de espera en ${space?.name}: ${startCOL} → ${endCOL}`,
+    "waitlist",
+    {
+      waitlistId: waitlistEntry.id,
+      position: waitlistEntry.position,
+      space: space?.name,
+      start: startCOL,
+      end: endCOL,
     }
   );
 }
 
 module.exports = {
   sendReservationConfirmation,
-  sendReservationCancellation
+  sendReservationCancellation,
+  sendWaitlistNotification
 };

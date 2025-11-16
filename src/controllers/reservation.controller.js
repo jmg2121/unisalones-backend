@@ -16,27 +16,18 @@ const {
 // =========================================================
 async function create(req, res) {
   try {
-    const { start, end, startTime, endTime, spaceId, space_id } = req.body;
-    const startValue = start || startTime;
-    const endValue = end || endTime;
+    // AHORA VIENEN DESDE normalizeDateFields
+    const { spaceId, space_id, startUTC, endUTC } = req.body;
     const finalSpaceId = spaceId || space_id;
 
-    if (!finalSpaceId || !startValue || !endValue) {
+    if (!finalSpaceId || !startUTC || !endUTC) {
       return res.status(400).json({
         message: 'Faltan campos requeridos: spaceId, start y end.',
       });
     }
 
-    const startDate = dayjs(startValue);
-    const endDate = dayjs(endValue);
-
-    if (!startDate.isValid() || !endDate.isValid()) {
-      return res.status(400).json({
-        message: 'Formato de fecha inválido. Usa formato ISO 8601.',
-      });
-    }
-
-    if (endDate.isSameOrBefore(startDate)) {
+    // Validación lógica
+    if (dayjs(endUTC).isSameOrBefore(dayjs(startUTC))) {
       return res.status(400).json({
         message: 'La hora de fin debe ser posterior a la hora de inicio.',
       });
@@ -45,11 +36,10 @@ async function create(req, res) {
     const { reservation } = await createReservation({
       spaceId: finalSpaceId,
       userId: req.user.id,
-      start: startDate.toDate(),
-      end: endDate.toDate(),
+      start: startUTC,
+      end: endUTC,
     });
 
-    // ✅ Respuesta esperada por los tests
     return res.status(201).json({
       id: reservation.id,
       space_id: reservation.space_id,
@@ -73,21 +63,28 @@ async function create(req, res) {
 // =========================================================
 async function modify(req, res) {
   try {
-    const { start, end } = req.body;
+    // Valores ya normalizados
+    const { startUTC, endUTC } = req.body;
     const reservationId = req.params.id;
 
-    if (!start || !end) {
+    if (!startUTC || !endUTC) {
       return res
         .status(400)
         .json({ message: 'Los campos start y end son obligatorios.' });
+    }
+
+    if (dayjs(endUTC).isSameOrBefore(dayjs(startUTC))) {
+      return res.status(400).json({
+        message: 'La hora de fin debe ser posterior a la hora de inicio.',
+      });
     }
 
     const result = await modifyReservation({
       reservationId,
       userId: req.user.id,
       isAdmin: req.user.role === 'admin',
-      newStart: dayjs(start).toDate(),
-      newEnd: dayjs(end).toDate(),
+      newStart: startUTC,
+      newEnd: endUTC,
     });
 
     return res.status(200).json(result);
@@ -118,7 +115,7 @@ async function cancelCtrl(req, res) {
 
     return res.status(200).json({
       message: result.message,
-      canceledId: result.canceledId,
+      canceledId: result.cancelledId,
       status: 'canceled',
     });
   } catch (error) {
@@ -174,26 +171,23 @@ async function getAllReservations(req, res) {
 }
 
 // =========================================================
-//  Unirse a la lista de espera
+//  Unirse a la lista de espera (CORREGIDO)
 // =========================================================
 async function joinWaitlistCtrl(req, res) {
   try {
-    const { spaceId, start, end } = req.body;
+    const { spaceId, startUTC, endUTC } = req.body;
 
-    if (!spaceId || !start || !end) {
+    if (!spaceId || !startUTC || !endUTC) {
       return res
         .status(400)
         .json({ message: 'spaceId, start y end son obligatorios.' });
     }
 
-    const startDate = dayjs(start).toDate();
-    const endDate = dayjs(end).toDate();
-
     const result = await joinWaitlist({
       spaceId,
       userId: req.user.id,
-      start: startDate,
-      end: endDate,
+      start: startUTC,
+      end: endUTC,
     });
 
     return res.status(201).json(result);

@@ -18,7 +18,7 @@ async function register({ name, email, password, role }) {
     throw new Error("Email no permitido: debe ser institucional (@unicomfacauca.edu.co)");
   }
 
-  const hash = await bcrypt.hash(password, 10);
+  const hash = await bcrypt.hash(password, 12);
   const user = await User.create({
     name,
     email,
@@ -33,9 +33,9 @@ async function register({ name, email, password, role }) {
 // Inicio de sesión con bloqueo por intentos fallidos
 async function login({ email, password }) {
   const user = await User.findOne({ where: { email } });
-  if (!user) throw new Error("Credenciales invalidas");
+  if (!user) throw new Error("Credenciales inválidas");
 
-  // Bloqueo temporal si excede los intentos
+  // Bloqueo temporal si ya está bloqueado
   if (user.lock_until && dayjs(user.lock_until).isAfter(dayjs())) {
     const remaining = dayjs(user.lock_until).diff(dayjs(), "minute");
     throw new Error("Cuenta bloqueada temporalmente. Intente en " + remaining + " minutos.");
@@ -43,14 +43,26 @@ async function login({ email, password }) {
 
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) {
+
+    // Sumar intento fallido
     user.failed_attempts = (user.failed_attempts || 0) + 1;
 
+    // 🔥 BLOQUEO AL SUPERAR LOS INTENTOS PERMITIDOS
     if (user.failed_attempts >= MAX_ATTEMPTS) {
       user.lock_until = dayjs().add(LOCK_MINUTES, "minute").toDate();
       user.failed_attempts = 0;
+
+      await user.save();
+
       console.warn("Usuario " + email + " bloqueado temporalmente por " + LOCK_MINUTES + " minutos");
+
+      // 🔥 RESPUESTA CORRECTA → lo que el test espera
+      throw new Error(
+        "Cuenta bloqueada temporalmente. Intente en " + LOCK_MINUTES + " minutos."
+      );
     }
 
+    // Si aún no se bloquea
     await user.save();
     throw new Error("Credenciales inválidas");
   }
