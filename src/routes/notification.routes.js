@@ -158,7 +158,7 @@ router.delete('/:id', authenticate, remove);
  * /notifications/test:
  *   post:
  *     tags: [Notifications]
- *     summary: Enviar correo de prueba y registrar notificación // HU-004 — Notificaciones de reservas (ADMIN/ESTUDIANTE/PROFESOR)
+ *     summary: Enviar correo de prueba y registrar notificación // HU-004 — Enviar Notificaciones (ADMIN/ESTUDIANTE/PROFESOR)
  *     description: Envía un correo electrónico de prueba usando las credenciales del servidor SMTP configurado y registra la notificación en la base de datos.
  *     security:
  *       - bearerAuth: []
