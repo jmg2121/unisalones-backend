@@ -1,6 +1,9 @@
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret_for_tests";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("Falta definir JWT_SECRET en el archivo .env");
+}
 const EXPIRES_IN = "7d"; // como en los tests
 
 // Genera token con payload seguro

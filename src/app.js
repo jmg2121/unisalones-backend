@@ -24,6 +24,8 @@ const reportRoutes = require('./routes/report.routes');
 
 const app = express();
 
+app.use('/assets', express.static('assets'));
+
 // ==========================================================
 // Middlewares básicos (funcionan en test, dev y prod)
 // ==========================================================
