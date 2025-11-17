@@ -11,12 +11,13 @@ const {
   joinWaitlist,
 } = require('../services/reservation.service');
 
+const { formatCOL } = require('../utils/dateFormat');
+
 // =========================================================
 //  Crear reserva
 // =========================================================
 async function create(req, res) {
   try {
-    // AHORA VIENEN DESDE normalizeDateFields
     const { spaceId, space_id, startUTC, endUTC } = req.body;
     const finalSpaceId = spaceId || space_id;
 
@@ -26,7 +27,6 @@ async function create(req, res) {
       });
     }
 
-    // Validación lógica
     if (dayjs(endUTC).isSameOrBefore(dayjs(startUTC))) {
       return res.status(400).json({
         message: 'La hora de fin debe ser posterior a la hora de inicio.',
@@ -44,26 +44,23 @@ async function create(req, res) {
       id: reservation.id,
       space_id: reservation.space_id,
       user_id: reservation.user_id,
-      start_time: reservation.start_time,
-      end_time: reservation.end_time,
+      start_time: formatCOL(reservation.start_time),
+      end_time: formatCOL(reservation.end_time),
       receipt_code: reservation.receipt_code,
       status: reservation.status,
       message: 'Reserva creada correctamente',
     });
   } catch (error) {
-    console.error('Error en createReservation:', error.message);
     return res
       .status(error.status || 500)
       .json({ message: error.message || 'Error interno del servidor' });
   }
 }
-
 // =========================================================
 //  Modificar reserva
 // =========================================================
 async function modify(req, res) {
   try {
-    // Valores ya normalizados
     const { startUTC, endUTC } = req.body;
     const reservationId = req.params.id;
 
@@ -87,15 +84,28 @@ async function modify(req, res) {
       newEnd: endUTC,
     });
 
-    return res.status(200).json(result);
+    const r = result.updatedReservation;
+
+    return res.status(200).json({
+      message: result.message,
+      updatedReservation: {
+        id: r.id,
+        space_id: r.space_id,
+        user_id: r.user_id,
+        start_time: formatCOL(r.start_time),
+        end_time: formatCOL(r.end_time),
+        status: r.status,
+        receipt_code: r.receipt_code,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      }
+    });
   } catch (error) {
-    console.error('Error al modificar reserva:', error.message);
     return res
       .status(error.status || 500)
       .json({ message: error.message || 'Error interno del servidor' });
   }
 }
-
 // =========================================================
 //  Cancelar reserva
 // =========================================================
@@ -142,7 +152,20 @@ async function myHistory(req, res) {
         .json({ message: 'No se encontraron reservas en el historial.' });
     }
 
-    return res.status(200).json(list);
+    return res.status(200).json(
+  list.map(r => ({
+    id: r.id,
+    space_id: r.space_id,
+    user_id: r.user_id,
+    start_time: formatCOL(r.start_time),
+    end_time: formatCOL(r.end_time),
+    status: r.status,
+    receipt_code: r.receipt_code,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }))
+);
+
   } catch (error) {
     console.error('Error al obtener historial:', error.message);
     return res
@@ -161,7 +184,19 @@ async function getAllReservations(req, res) {
       order: [['start_time', 'DESC']],
     });
 
-    return res.status(200).json(list);
+    return res.status(200).json(
+  list.map(r => ({
+    id: r.id,
+    space_id: r.space_id,
+    user_id: r.user_id,
+    start_time: formatCOL(r.start_time),
+    end_time: formatCOL(r.end_time),
+    status: r.status,
+    receipt_code: r.receipt_code,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }))
+);
   } catch (error) {
     console.error('Error al obtener reservas:', error.message);
     return res
@@ -190,7 +225,15 @@ async function joinWaitlistCtrl(req, res) {
       end: endUTC,
     });
 
-    return res.status(201).json(result);
+    return res.status(201).json({
+  message: result.message,
+  entry: {
+    ...result.entry.toJSON(),
+    start_time: formatCOL(result.entry.start_time),
+    end_time: formatCOL(result.entry.end_time),
+  }
+});
+
   } catch (error) {
     console.error('Error al unirse a la lista de espera:', error.message);
     return res
@@ -217,7 +260,20 @@ async function getWaitlistCtrl(req, res) {
         .json({ message: 'No hay registros en la lista de espera.' });
     }
 
-    return res.status(200).json(list);
+    return res.status(200).json(
+  list.map(entry => ({
+    id: entry.id,
+    user_id: entry.user_id, 
+    space_id: entry.space_id,
+    position: entry.position,
+    status: entry.status,
+    start_time: formatCOL(entry.start_time),
+    end_time: formatCOL(entry.end_time),
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt,
+  }))
+);
+
   } catch (error) {
     console.error('Error al obtener lista de espera:', error.message);
     return res
