@@ -29,21 +29,22 @@ const swaggerDefinition = {
     { name: 'Reports', description: 'Reportes de Uso — JSON, PDF y XLSX' }
   ],
   components: {
-  securitySchemes: {
-    bearerAuth: {
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      description: `
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: `
 Autenticación Mediante **TOKEN JWT**.  
 PEGA TU TOKEN EN EL CAMPO INFERIOR **(Sin Incluir El Prefijo "Bearer")**.  
 Ejemplo: \`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\`
-      `
-    }
-  },
+        `
+      }
+    },
     schemas: {
+
       // =========================================================
-      // Esquemas base reutilizables
+      // SCHEMA: Space
       // =========================================================
       Space: {
         type: 'object',
@@ -55,6 +56,10 @@ Ejemplo: \`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\`
         },
         required: ['name', 'type', 'capacity']
       },
+
+      // =========================================================
+      // SCHEMA: Reservation
+      // =========================================================
       Reservation: {
         type: 'object',
         properties: {
@@ -66,6 +71,10 @@ Ejemplo: \`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\`
           status: { type: 'string', enum: ['PENDING', 'CONFIRMED', 'CANCELLED'] }
         }
       },
+
+      // =========================================================
+      // SCHEMA: ApiError
+      // =========================================================
       ApiError: {
         type: 'object',
         properties: {
@@ -73,8 +82,9 @@ Ejemplo: \`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\`
           details: { type: 'array', items: { type: 'string' } }
         }
       },
+
       // =========================================================
-      // Esquema Reporte de Uso
+      // SCHEMA: ReportUsage
       // =========================================================
       ReportUsage: {
         type: 'object',
@@ -104,22 +114,6 @@ Ejemplo: \`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\`
                         totalHours: { type: 'number', example: 12.5 },
                         spacesUsed: { type: 'integer', example: 3 }
                       }
-                    },
-                    spaces: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          spaceId: { type: 'integer', example: 1 },
-                          spaceName: { type: 'string', example: 'Sala A' },
-                          reservationsCount: { type: 'integer', example: 2 },
-                          totalHours: { type: 'number', example: 5.5 },
-                          statusBreakdown: {
-                            type: 'object',
-                            example: { confirmed: 2, cancelled: 1 }
-                          }
-                        }
-                      }
                     }
                   }
                 }
@@ -127,7 +121,23 @@ Ejemplo: \`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\`
             }
           }
         }
+      },
+
+      // =========================================================
+      // SCHEMA: Notification (CORRECTO Y FUERA DE ReportUsage)
+      // =========================================================
+      Notification: {
+        type: "object",
+        properties: {
+          id: { type: "integer", example: 1 },
+          user_id: { type: "integer", example: 3 },
+          title: { type: "string", example: "Reserva confirmada" },
+          message: { type: "string", example: "Tu reserva fue aprobada" },
+          createdAt: { type: "string", format: "date-time" },
+          read: { type: "boolean", example: false }
+        }
       }
+
     }
   },
   security: [{ bearerAuth: [] }]
@@ -140,9 +150,7 @@ const options = {
 
 const swaggerSpec = swaggerJSDoc(options);
 
-// ==========================================================
-// Exporta la especificación y la ruta del JS personalizado
-// ==========================================================
+// Ruta del archivo JS personalizado para Swagger UI
 const swaggerCustomJs = 'swagger-custom.js';
 
 module.exports = { swaggerSpec, swaggerCustomJs };

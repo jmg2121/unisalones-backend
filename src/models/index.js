@@ -20,7 +20,6 @@ if (env === 'test') {
     ...config,
     timezone: '-05:00',     // Guarda la hora tal cual
     dialectOptions: {
-      useUTC: false,        // No conviertas a UTC
       dateStrings: true,    // Evita auto-conversión al leer
       typeCast: true
     }
