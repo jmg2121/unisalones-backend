@@ -67,7 +67,11 @@ async function listAll(req, res, next) {
     }
 
     const items = await Notification.findAll({
-      include: [{ model: User, attributes: ['name', 'email'] }],
+      include: [{
+  model: User,
+  as: 'user',              
+  attributes: ['id', 'name', 'email', 'role']
+}],
       order: [['createdAt', 'DESC']]
     });
 
