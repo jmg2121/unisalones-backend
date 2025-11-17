@@ -5,7 +5,28 @@ const env = process.env.NODE_ENV || 'development';
 const config = require('../config/config')[env];
 
 // Inicializar conexión Sequelize
-const sequelize = new Sequelize(config);
+let sequelize;
+
+if (env === 'test') {
+  // SQLite → NO PERMITE timezone
+  sequelize = new Sequelize({
+    ...config,
+    logging: false,   // más rápido para Jest
+  });
+
+} else {
+  // MySQL → Guardar hora Colombia exactamente
+  sequelize = new Sequelize({
+    ...config,
+    timezone: '-05:00',     // Guarda la hora tal cual
+    dialectOptions: {
+      useUTC: false,        // No conviertas a UTC
+      dateStrings: true,    // Evita auto-conversión al leer
+      typeCast: true
+    }
+  });
+}
+
 const db = {};
 
 // ============================================================

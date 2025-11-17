@@ -125,12 +125,36 @@ router.post(
  *                 example: Passw0rd!
  *     responses:
  *       '200':
- *         description: Inicio de sesión exitoso.
+ *         description: Inicio de sesión exitoso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Inicio de sesión exitoso"
+ *                 token:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNzM0MzUwMDAwLCJleHAiOjE3MzQzNTM2MDB9.XYk8eZJqpWUtVS7za6xqSQ9kW1q4AXwP1vE2LEkFBA"
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 3
+ *                     name:
+ *                       type: string
+ *                       example: "Mariana López"
+ *                     email:
+ *                       type: string
+ *                       example: "mariana.lopez@unicomfacauca.edu.co"
  *       '400':
  *         description: Credenciales inválidas.
  *       '429':
  *         description: Demasiadas solicitudes.
  */
+
 
 router.post(
   '/login',

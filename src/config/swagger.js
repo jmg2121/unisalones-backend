@@ -143,6 +143,6 @@ const swaggerSpec = swaggerJSDoc(options);
 // ==========================================================
 // Exporta la especificación y la ruta del JS personalizado
 // ==========================================================
-const swaggerCustomJs = '/swagger-custom.js';
+const swaggerCustomJs = 'swagger-custom.js';
 
 module.exports = { swaggerSpec, swaggerCustomJs };

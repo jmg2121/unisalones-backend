@@ -10,6 +10,7 @@ const { sequelize } = require('./models');
 // Swagger
 const swaggerUi = require('swagger-ui-express');
 const { swaggerSpec, swaggerCustomJs } = require('./config/swagger');
+const path = require('path');
 
 // Middlewares externos SOLO para entornos reales
 const morgan = require('morgan');
@@ -47,19 +48,20 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(globalLimiter);
   app.use('/api/auth', authLimiter);
 
-  // Swagger
-  app.get('/swagger-custom.js', (req, res) => {
-    res.type('application/javascript').send(swaggerCustomJs);
-  });
+  // Swagger: cargar JS personalizado
+app.get('/swagger-custom.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'config/swagger-custom.js'));
+});
 
-  app.use(
-    '/api-docs',
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, {
-      explorer: true,
-      customJs: '/swagger-custom.js'
-    })
-  );
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    customJs: '/swagger-custom.js'
+  })
+);
+
 
   // Admin Docs solo fuera de test
   app.use("/admin-docs", adminDocsRoutes);
